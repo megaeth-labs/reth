@@ -19,7 +19,7 @@ use reth_primitives::{
 };
 use reth_provider::{
     post_state::PostState, BlockExecutor, BlockReader, DatabaseProviderRW, ExecutorFactory,
-    HeaderProvider, LatestStateProviderRef, ProviderError,
+    HashingWriter, HeaderProvider, LatestStateProviderRef, ProviderError,
 };
 use std::{ops::RangeInclusive, time::Instant};
 use tracing::*;
@@ -67,6 +67,7 @@ pub struct ExecutionStage<EF: ExecutorFactory> {
     external_clean_threshold: u64,
     /// Pruning configuration.
     prune_modes: PruneModes,
+    update_merkle: bool,
 }
 
 impl<EF: ExecutorFactory> ExecutionStage<EF> {
@@ -83,6 +84,7 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             executor_factory,
             thresholds,
             prune_modes,
+            update_merkle: false,
         }
     }
 
@@ -162,6 +164,24 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             stage_progress = block_number;
             stage_checkpoint.progress.processed += block.gas_used;
 
+            // Update merkle trie
+            if self.update_merkle {
+                if block_number == 1 {
+                    panic!("This test cannot start from block 1!");
+                }
+
+                state.write_to_db(provider.tx_ref(), block_number)?;
+
+                provider.insert_hashes(
+                    block_number..=block_number,
+                    block.header.hash_slow(),
+                    block.state_root,
+                )?;
+
+                state = PostState::default();
+                state.add_prune_modes(self.prune_modes.clone());
+            }
+
             // Check if we should commit now
             if self.thresholds.is_end_of_batch(block_number - start_block, state.size_hint() as u64)
             {
@@ -172,7 +192,9 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         // Write remaining changes
         trace!(target: "sync::stages::execution", accounts = state.accounts().len(), "Writing updated state to database");
         let start = Instant::now();
-        state.write_to_db(provider.tx_ref(), max_block)?;
+        if !self.update_merkle {
+            state.write_to_db(provider.tx_ref(), max_block)?;
+        }
         trace!(target: "sync::stages::execution", took = ?start.elapsed(), "Wrote state");
 
         let done = stage_progress == max_block;
@@ -210,6 +232,11 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             prune_modes.storage_history = None;
         }
         Ok(prune_modes)
+    }
+
+    /// Set update_merkle_trie flag.
+    pub fn set_update_merkle_trie_flag(&mut self) {
+        self.update_merkle = true;
     }
 }
 

@@ -102,6 +102,9 @@ pub struct Command {
     // e.g. query the DB size, or any table data.
     #[arg(long, short)]
     commit: bool,
+
+    #[arg(long, short)]
+    update_merkle_trie: bool,
 }
 
 impl Command {
@@ -195,18 +198,19 @@ impl Command {
                 StageEnum::Senders => (Box::new(SenderRecoveryStage::new(batch_size)), None),
                 StageEnum::Execution => {
                     let factory = reth_revm::Factory::new(self.chain.clone());
-                    (
-                        Box::new(ExecutionStage::new(
-                            factory,
-                            ExecutionStageThresholds {
-                                max_blocks: Some(batch_size),
-                                max_changes: None,
-                            },
-                            config.stages.merkle.clean_threshold,
-                            config.prune.map(|prune| prune.parts).unwrap_or_default(),
-                        )),
-                        None,
-                    )
+                    let mut exec_stage = Box::new(ExecutionStage::new(
+                        factory,
+                        ExecutionStageThresholds {
+                            max_blocks: Some(batch_size),
+                            max_changes: None,
+                        },
+                        config.stages.merkle.clean_threshold,
+                        config.prune.map(|prune| prune.parts).unwrap_or_default(),
+                    ));
+                    if self.update_merkle_trie {
+                        exec_stage.set_update_merkle_trie_flag();
+                    }
+                    (exec_stage, None)
                 }
                 StageEnum::TxLookup => {
                     (Box::new(TransactionLookupStage::new(batch_size, PruneModes::none())), None)
