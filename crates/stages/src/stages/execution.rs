@@ -24,6 +24,12 @@ use reth_provider::{
 use std::{ops::RangeInclusive, time::Instant};
 use tracing::*;
 
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    ops::Mul,
+};
+
 /// The execution stage executes all transactions and
 /// update history indexes.
 ///
@@ -68,6 +74,31 @@ pub struct ExecutionStage<EF: ExecutorFactory> {
     /// Pruning configuration.
     prune_modes: PruneModes,
     update_merkle: bool,
+}
+
+#[inline(always)]
+fn rdtsc() -> u64 {
+    unsafe { core::arch::x86_64::_rdtsc() }
+}
+
+fn get_cpu_frequency() -> Option<f64> {
+    let file = File::open("/proc/cpuinfo").unwrap();
+    let reader = BufReader::new(file);
+
+    for line in reader.lines() {
+        let line = line.unwrap();
+        if let Some(freq_str) = line.strip_prefix("cpu MHz\t\t: ") {
+            let frequency: f64 = freq_str.parse().unwrap();
+            return Some(frequency * 1e6)
+        }
+    }
+
+    None
+}
+
+fn cycles_to_nanoseconds(cycles: u64, frequency: f64) -> u64 {
+    let ns_per_cycle = 1_000_000_000 as f64 / frequency;
+    (cycles as f64 * ns_per_cycle) as u64
 }
 
 impl<EF: ExecutorFactory> ExecutionStage<EF> {
@@ -133,6 +164,13 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         let mut state = PostState::default();
         state.add_prune_modes(prune_modes);
 
+        let fre = get_cpu_frequency().unwrap();
+        let mut txs_number: usize = 0;
+        let mut gas_used_in_m = 0.0f64;
+        let mut cnt = 0;
+        let mut start_time = rdtsc();
+        const N: u64 = 1000;
+
         for block_number in start_block..=max_block {
             let td = provider
                 .header_td_by_number(block_number)?
@@ -158,6 +196,25 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                 let _ =
                     metrics_tx.send(MetricEvent::ExecutionStageGas { gas: block.header.gas_used });
             }
+
+            if cnt % N == 0 {
+                let end_time = rdtsc();
+                let cycles = end_time - start_time;
+                let elapsed_ns = cycles_to_nanoseconds(cycles, fre);
+                let tps = (txs_number * 1000_000_000) as u64 / elapsed_ns;
+                let mgas_ps = gas_used_in_m.mul(1000_000_000 as f64) / elapsed_ns as f64;
+                info!(target: "sync::stages::execution", "block_number = {:?}, tps = {:?}, mGas/s = {:?}", block_number, tps, mgas_ps);
+
+                start_time = end_time;
+                txs_number = block.body.len();
+                gas_used_in_m =
+                    block.header.gas_used as f64 / reth_primitives::constants::MGAS_TO_GAS as f64;
+            } else {
+                txs_number += block.body.len();
+                gas_used_in_m +=
+                    block.header.gas_used as f64 / reth_primitives::constants::MGAS_TO_GAS as f64;
+            }
+            cnt += 1;
 
             // Merge state changes
             state.extend(block_state);
