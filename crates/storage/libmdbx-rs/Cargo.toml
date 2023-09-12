@@ -24,9 +24,12 @@ ffi = { package = "reth-mdbx-sys", path = "./mdbx-sys" }
 
 lifetimed-bytes = { version = "0.1", optional = true }
 
+perf-metrics = { workspace = true, optional = true }
+
 [features]
 default = []
 return-borrowed = []
+enable_db_speed_record =["perf-metrics"]
 
 [dev-dependencies]
 pprof = { version = "0.12", features = ["flamegraph", "frame-pointer", "criterion"] }
