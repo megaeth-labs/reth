@@ -27,6 +27,72 @@ use tracing::*;
 #[cfg(feature = "open_performance_dashboard")]
 use revm_utils::time::{get_cpu_frequency, TimeRecorder};
 
+///
+#[derive(Debug, Default)]
+pub struct ExecutionDurationRecord {
+    /// execute inner time recorder
+    inner_recorder: revm_utils::time::TimeRecorder,
+    /// time recorder
+    time_recorder: revm_utils::time::TimeRecorder,
+
+    /// total time of execute_inner
+    pub(crate) execute_inner: u64,
+    /// total time of  get block td and block_with_senders
+    pub(crate) read_block: u64,
+    /// time of revm execute tx(execute_and_verify_receipt)
+    pub(crate) execute_tx: u64,
+    /// time of process state(state.extend)
+    pub(crate) process_state: u64,
+    /// time of write to db
+    pub(crate) write_to_db: u64,
+}
+
+impl ExecutionDurationRecord {
+    /// start inner time recorder
+    pub fn start_inner_time_recorder(&mut self) {
+        self.inner_recorder = revm_utils::time::TimeRecorder::now();
+    }
+    /// start time recorder
+    pub fn start_time_recorder(&mut self) {
+        self.time_recorder = revm_utils::time::TimeRecorder::now();
+    }
+    /// add time of execute_inner
+    pub fn add_execute_inner(&mut self) {
+        self.execute_inner = self
+            .execute_inner
+            .checked_add(self.inner_recorder.elapsed().to_cycles())
+            .expect("overflow");
+    }
+    /// add time of get block td and block_with_senders
+    pub fn add_read_block(&mut self) {
+        self.read_block = self
+            .read_block
+            .checked_add(self.time_recorder.elapsed().to_cycles())
+            .expect("overflow");
+    }
+    /// add time of revm execute tx
+    pub fn add_execute_tx(&mut self) {
+        self.execute_tx = self
+            .execute_tx
+            .checked_add(self.time_recorder.elapsed().to_cycles())
+            .expect("overflow");
+    }
+    /// add time of process state
+    pub fn add_process_state(&mut self) {
+        self.process_state = self
+            .process_state
+            .checked_add(self.time_recorder.elapsed().to_cycles())
+            .expect("overflow");
+    }
+    /// add time of write to db
+    pub fn add_write_to_db(&mut self) {
+        self.write_to_db = self
+            .write_to_db
+            .checked_add(self.time_recorder.elapsed().to_cycles())
+            .expect("overflow");
+    }
+}
+
 /// The execution stage executes all transactions and
 /// update history indexes.
 ///
@@ -117,6 +183,17 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             return Ok(ExecOutput::done(input.checkpoint()))
         }
 
+        #[cfg(all(
+            feature = "open_performance_dashboard",
+            feature = "open_execution_duration_record"
+        ))]
+        let mut duration_record = ExecutionDurationRecord::default();
+        #[cfg(all(
+            feature = "open_performance_dashboard",
+            feature = "open_execution_duration_record"
+        ))]
+        duration_record.start_inner_time_recorder();
+
         let start_block = input.next_block();
         let max_block = input.target();
         let prune_modes = self.adjust_prune_modes(provider, start_block, max_block)?;
@@ -151,63 +228,69 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         const N1: u64 = 100;
 
         for block_number in start_block..=max_block {
-            #[cfg(feature = "open_performance_dashboard")]
-            let mut time_record = TimeRecorder::now();
+            #[cfg(all(
+                feature = "open_performance_dashboard",
+                feature = "open_execution_duration_record"
+            ))]
+            duration_record.start_time_recorder();
             let td = provider
                 .header_td_by_number(block_number)?
                 .ok_or_else(|| ProviderError::HeaderNotFound(block_number.into()))?;
             let block = provider
                 .block_with_senders(block_number)?
                 .ok_or_else(|| ProviderError::BlockNotFound(block_number.into()))?;
-            #[cfg(feature = "open_performance_dashboard")]
-            if let Some(metrics_tx) = &mut self.metrics_tx {
-                let time = time_record.elapsed().to_nanoseconds(cpu_frequency);
-                let _ = metrics_tx.send(MetricEvent::ReadBlockInfoTime { time });
-            }
+            #[cfg(all(
+                feature = "open_performance_dashboard",
+                feature = "open_execution_duration_record"
+            ))]
+            duration_record.add_read_block();
 
             // Configure the executor to use the current state.
             trace!(target: "sync::stages::execution", number = block_number, txs = block.body.len(), "Executing block");
 
             // Execute the block
             let (block, senders) = block.into_components();
-            #[cfg(feature = "open_performance_dashboard")]
-            let mut time_record = TimeRecorder::now();
+            #[cfg(all(
+                feature = "open_performance_dashboard",
+                feature = "open_execution_duration_record"
+            ))]
+            duration_record.start_time_recorder();
             let block_state = executor
                 .execute_and_verify_receipt(&block, td, Some(senders))
                 .map_err(|error| StageError::ExecutionError {
                     block: block.header.clone().seal_slow(),
                     error,
                 })?;
-            #[cfg(feature = "open_performance_dashboard")]
-            if let Some(metrics_tx) = &mut self.metrics_tx {
-                let time = time_record.elapsed().to_nanoseconds(cpu_frequency);
-                let _ = metrics_tx.send(MetricEvent::RevmExecuteTxTime { time });
-            }
+            #[cfg(all(
+                feature = "open_performance_dashboard",
+                feature = "open_execution_duration_record"
+            ))]
+            duration_record.add_execute_tx();
 
             // Gas and txs metrics
             if let Some(metrics_tx) = &mut self.metrics_tx {
                 let _ =
                     metrics_tx.send(MetricEvent::ExecutionStageGas { gas: block.header.gas_used });
-
+                
                 #[cfg(feature = "open_performance_dashboard")]
                 {
                     if cnt % N == 0 {
                         let _ = metrics_tx.send(MetricEvent::ExecutionStageGas { gas: total_gas });
-                        let _ = metrics_tx.send(MetricEvent::ExecutionStageTxs { txs: total_txs });
+                let _ = metrics_tx.send(MetricEvent::ExecutionStageTxs { txs: total_txs });
 
-                        println!(
-                            "cnt: {:?}, block_number: {:?}, txs: {:?}, gas: {:?}",
-                            cnt, block_number, total_txs, total_gas
-                        );
+                println!(
+                "cnt: {:?}, block_number: {:?}, txs: {:?}, gas: {:?}",
+                cnt, block_number, total_txs, total_gas
+                );
 
-                        total_txs = block.body.len() as u64;
-                        total_gas = block.header.gas_used;
-                    } else {
-                        total_txs += block.body.len() as u64;
-                        total_gas += block.header.gas_used;
-                    }
+                total_txs = block.body.len() as u64;
+                total_gas = block.header.gas_used;
+                } else {
+                total_txs += block.body.len() as u64;
+                total_gas += block.header.gas_used;
+                }
 
-                    cnt += 1;
+                cnt += 1;
                 }
 
                 #[cfg(feature = "open_revm_metrics_record")]
@@ -226,42 +309,63 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             }
 
             // Merge state changes
-            #[cfg(feature = "open_performance_dashboard")]
-            let mut time_record = TimeRecorder::now();
+            #[cfg(all(
+                feature = "open_performance_dashboard",
+                feature = "open_execution_duration_record"
+            ))]
+            duration_record.start_time_recorder();
             state.extend(block_state);
             stage_progress = block_number;
             stage_checkpoint.progress.processed += block.gas_used;
-            #[cfg(feature = "open_performance_dashboard")]
-            if let Some(metrics_tx) = &mut self.metrics_tx {
-                let time = time_record.elapsed().to_nanoseconds(cpu_frequency);
-                let _ = metrics_tx.send(MetricEvent::PostProcessTime { time });
-            }
+            #[cfg(all(
+                feature = "open_performance_dashboard",
+                feature = "open_execution_duration_record"
+            ))]
+            duration_record.add_process_state();
 
             // Check if we should commit now
             if self.thresholds.is_end_of_batch(block_number - start_block, state.size_hint() as u64)
             {
                 println!("break ===================, block_number: {:?}", block_number);
-                break
+                break;
             }
         }
 
         // Write remaining changes
         trace!(target: "sync::stages::execution", accounts = state.accounts().len(), "Writing updated state to database");
         let start = Instant::now();
-        #[cfg(feature = "open_performance_dashboard")]
-        {
-            let mut time_record = TimeRecorder::now();
-            state.write_to_db(provider.tx_ref(), max_block)?;
-            let time = time_record.elapsed().to_nanoseconds(cpu_frequency);
-            if let Some(metrics_tx) = &mut self.metrics_tx {
-                let _ = metrics_tx.send(MetricEvent::WriteToDbTime { time });
-            }
-            println!("write_to_db ============ {:?} ns", time);
-        }
-
-        #[cfg(not(feature = "open_performance_dashboard"))]
+        #[cfg(all(
+            feature = "open_performance_dashboard",
+            feature = "open_execution_duration_record"
+        ))]
+        duration_record.start_time_recorder();
         state.write_to_db(provider.tx_ref(), max_block)?;
+        #[cfg(all(
+            feature = "open_performance_dashboard",
+            feature = "open_execution_duration_record"
+        ))]
+        duration_record.add_write_to_db();
         trace!(target: "sync::stages::execution", took = ?start.elapsed(), "Wrote state");
+
+        #[cfg(all(
+            feature = "open_performance_dashboard",
+            feature = "open_execution_duration_record"
+        ))]
+        {
+            duration_record.add_execute_inner();
+
+            if let Some(metrics_tx) = &mut self.metrics_tx {
+                let _ = metrics_tx.send(MetricEvent::ExecutionStageTime {
+                    execute_inner: duration_record.execute_inner,
+                    read_block: duration_record.read_block,
+                    execute_tx: duration_record.execute_tx,
+                    process_state: duration_record.process_state,
+                    write_to_db: duration_record.write_to_db,
+                });
+            }
+
+            println!("duration_record: {:?}", duration_record);
+        }
 
         let done = stage_progress == max_block;
         Ok(ExecOutput {

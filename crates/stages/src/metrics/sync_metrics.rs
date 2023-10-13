@@ -40,6 +40,9 @@ pub(crate) struct ExecutionStageMetrics {
     #[cfg(feature = "open_performance_dashboard")]
     pub(crate) txs_processed_total: Counter,
     #[cfg(feature = "open_performance_dashboard")]
+    /// Time of execute inner.
+    #[cfg(feature = "open_performance_dashboard")]
+    pub(crate) execute_inner_time: Counter,
     /// Time of read block info.
     #[cfg(feature = "open_performance_dashboard")]
     pub(crate) read_block_info_time: Counter,

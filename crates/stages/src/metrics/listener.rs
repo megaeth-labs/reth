@@ -12,6 +12,9 @@ use std::{
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tracing::trace;
 
+#[cfg(feature = "open_performance_dashboard")]
+use revm_utils::time::{convert_to_nanoseconds, get_cpu_frequency};
+
 // #[cfg(feature = "open_revm_metrics_record")]
 // use revm_utils::types::RevmMetricRecord;
 
@@ -78,6 +81,20 @@ pub enum MetricEvent {
     WriteToDbTime {
         /// time.
         time: u64,
+    },
+    /// Execution stage processed .
+    #[cfg(feature = "open_execution_duration_record")]
+    ExecutionStageTime {
+        /// total time of execute_inner
+        execute_inner: u64,
+        /// total time of  get block td and block_with_senders
+        read_block: u64,
+        /// time of revm execute tx(execute_and_verify_receipt)
+        execute_tx: u64,
+        /// time of process state(state.extend)
+        process_state: u64,
+        /// time of write to db
+        write_to_db: u64,
     },
 }
 
@@ -151,6 +168,40 @@ impl MetricsListener {
             MetricEvent::WriteToDbTime { time } => {
                 self.sync_metrics.execution_stage.write_to_db_time.increment(time)
             }
+            #[cfg(all(
+                feature = "open_performance_dashboard",
+                feature = "open_execution_duration_record"
+            ))]
+            MetricEvent::ExecutionStageTime {
+                execute_inner,
+                read_block,
+                execute_tx,
+                process_state,
+                write_to_db,
+            } => {
+                let cpu_frequency = get_cpu_frequency().expect("Get cpu frequency error!");
+
+                self.sync_metrics
+                    .execution_stage
+                    .execute_inner_time
+                    .increment(convert_to_nanoseconds(execute_inner, cpu_frequency));
+                self.sync_metrics
+                    .execution_stage
+                    .read_block_info_time
+                    .increment(convert_to_nanoseconds(read_block, cpu_frequency));
+                self.sync_metrics
+                    .execution_stage
+                    .revm_execute_time
+                    .increment(convert_to_nanoseconds(execute_tx, cpu_frequency));
+                self.sync_metrics
+                    .execution_stage
+                    .post_process_time
+                    .increment(convert_to_nanoseconds(process_state, cpu_frequency));
+                self.sync_metrics
+                    .execution_stage
+                    .write_to_db_time
+                    .increment(convert_to_nanoseconds(write_to_db, cpu_frequency));
+            }
         }
     }
 }
@@ -165,7 +216,7 @@ impl Future for MetricsListener {
         loop {
             let Some(event) = ready!(this.events_rx.poll_recv(cx)) else {
                 // Channel has closed
-                return Poll::Ready(())
+                return Poll::Ready(());
             };
 
             this.handle_event(event);
