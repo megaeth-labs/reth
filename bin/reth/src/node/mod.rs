@@ -247,7 +247,7 @@ impl<Ext: RethCliExt> NodeCommand<Ext> {
 
         self.start_metrics_endpoint(Arc::clone(&db)).await?;
 
-        #[cfg(feature = "open_performance_dashboard")]
+        #[cfg(any(feature = "open_performance_dashboard", feature = "open_execution_duration_record"))]
         {
             start_performance_dashboard(&ctx.task_executor);
         }
@@ -931,7 +931,7 @@ async fn run_network_until_shutdown<C>(
     }
 }
 
-#[cfg(feature = "open_performance_dashboard")]
+#[cfg(any(feature = "open_performance_dashboard", feature = "open_execution_duration_record"))]
 fn start_performance_dashboard(task_executor: &TaskExecutor) {
     use crate::performance_metrics::{metric_handler::*, metric_recoder::*, metric_storage::*};
 
