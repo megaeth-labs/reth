@@ -931,7 +931,7 @@ async fn run_network_until_shutdown<C>(
     }
 }
 
-#[cfg(any(feature = "open_performance_dashboard", feature = "open_execution_duration_record"))]
+#[cfg(feature = "open_performance_dashboard")]
 fn start_performance_dashboard(task_executor: &TaskExecutor) {
     use crate::performance_metrics::{metric_handler::*, metric_recoder::*, metric_storage::*};
 

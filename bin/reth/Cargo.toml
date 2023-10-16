@@ -150,7 +150,7 @@ open_revm_metrics_record = [
     "reth-stages/open_revm_metrics_record",
 ]
 open_execution_duration_record = ["reth-stages/open_execution_duration_record", "open_performance_dashboard"]
-open_tps_gas_record = ["reth-stages/open_tps_gas_record"]
+open_tps_gas_record = ["reth-stages/open_tps_gas_record", "open_performance_dashboard"]
 open_revm_instruction_log = ["reth-revm/open_revm_instruction_log"]
 finish_after_execution_stage = ["reth-stages/finish_after_execution_stage"]
 

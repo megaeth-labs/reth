@@ -24,9 +24,6 @@ use reth_provider::{
 use std::{ops::RangeInclusive, time::Instant};
 use tracing::*;
 
-#[cfg(feature = "open_performance_dashboard")]
-use revm_utils::time::{get_cpu_frequency, TimeRecorder};
-
 ///
 #[derive(Debug, Default)]
 pub struct ExecutionDurationRecord {
@@ -205,17 +202,6 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         let mut state = PostState::default();
         state.add_prune_modes(prune_modes);
 
-        #[cfg(feature = "open_performance_dashboard")]
-        let mut cnt = 0u64;
-        #[cfg(feature = "open_performance_dashboard")]
-        let mut total_txs = 0u64;
-        #[cfg(feature = "open_performance_dashboard")]
-        let mut total_gas = 0u64;
-        #[cfg(feature = "open_performance_dashboard")]
-        const N: u64 = 1;
-        #[cfg(feature = "open_performance_dashboard")]
-        let cpu_frequency = get_cpu_frequency().expect("Get cpu frequency error!");
-
         #[cfg(feature = "open_revm_metrics_record")]
         let mut cnt1 = 0u64;
         #[cfg(feature = "open_revm_metrics_record")]
@@ -250,44 +236,26 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             duration_record.add_execute_tx();
 
             // Gas and txs metrics
+            #[cfg(feature = "open_tps_gas_record")]
             if let Some(metrics_tx) = &mut self.metrics_tx {
-                let _ =
-                    metrics_tx.send(MetricEvent::ExecutionStageGas { gas: block.header.gas_used });
-                
-                #[cfg(feature = "open_performance_dashboard")]
-                {
-                    if cnt % N == 0 {
-                        let _ = metrics_tx.send(MetricEvent::ExecutionStageGas { gas: total_gas });
-                let _ = metrics_tx.send(MetricEvent::ExecutionStageTxs { txs: total_txs });
+                let _ = metrics_tx.send(MetricEvent::BlockTpsAndGas {
+                    txs: block.body.len() as u64,
+                    gas: block.header.gas_used,
+                });
+            }
 
-                println!(
-                "cnt: {:?}, block_number: {:?}, txs: {:?}, gas: {:?}",
-                cnt, block_number, total_txs, total_gas
-                );
-
-                total_txs = block.body.len() as u64;
-                total_gas = block.header.gas_used;
-                } else {
-                total_txs += block.body.len() as u64;
-                total_gas += block.header.gas_used;
+            #[cfg(feature = "open_revm_metrics_record")]
+            if let Some(metrics_tx) = &mut self.metrics_tx {
+                if cnt1 % N1 == 0 {
+                    let record = executor.get_revm_metric_record();
+                    println!("");
+                    println!("block_number = {:?}", block_number);
+                    println!("revm_record = {:?}", record);
+                    let cachedb_size = executor.get_revm_metric_cachedb_size();
+                    println!("cachedb_size = {:?}", cachedb_size);
+                    println!("");
                 }
-
-                cnt += 1;
-                }
-
-                #[cfg(feature = "open_revm_metrics_record")]
-                {
-                    if cnt1 % N1 == 0 {
-                        let record = executor.get_revm_metric_record();
-                        println!("");
-                        println!("block_number = {:?}", block_number);
-                        println!("revm_record = {:?}", record);
-                        let cachedb_size = executor.get_revm_metric_cachedb_size();
-                        println!("cachedb_size = {:?}", cachedb_size);
-                        println!("");
-                    }
-                    cnt1 += 1;
-                }
+                cnt1 += 1;
             }
 
             // Merge state changes

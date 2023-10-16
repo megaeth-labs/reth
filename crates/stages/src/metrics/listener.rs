@@ -1,6 +1,7 @@
 use crate::metrics::SyncMetrics;
+#[cfg(feature = "open_tps_gas_record")]
+use reth_primitives::constants::MGAS_TO_GAS;
 use reth_primitives::{
-    constants::MGAS_TO_GAS,
     stage::{StageCheckpoint, StageId},
     BlockNumber,
 };
@@ -12,7 +13,7 @@ use std::{
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tracing::trace;
 
-#[cfg(any(feature = "open_performance_dashboard", feature = "open_execution_duration_record"))]
+#[cfg(feature = "open_execution_duration_record")]
 use revm_utils::time::{convert_to_nanoseconds, get_cpu_frequency};
 
 // #[cfg(feature = "open_revm_metrics_record")]
@@ -39,17 +40,6 @@ pub enum MetricEvent {
         /// If specified, `entities_total` metric is updated.
         max_block_number: Option<BlockNumber>,
     },
-    /// Execution stage processed some amount of gas.
-    ExecutionStageGas {
-        /// Gas processed.
-        gas: u64,
-    },
-    /// Execution stage processed some amount of txs.
-    #[cfg(feature = "open_performance_dashboard")]
-    ExecutionStageTxs {
-        /// Txs processed.
-        txs: u64,
-    },
     // /// Revm metric record.
     // #[cfg(feature = "open_revm_metrics_record")]
     // RevmMetricRecord {
@@ -73,6 +63,14 @@ pub enum MetricEvent {
         process_state: u64,
         /// time of write to db
         write_to_db: u64,
+    },
+    /// Execution stage processed .
+    #[cfg(feature = "open_tps_gas_record")]
+    BlockTpsAndGas {
+        /// total time of  get block td and block_with_senders
+        txs: u64,
+        /// time of revm execute tx(execute_and_verify_receipt)
+        gas: u64,
     },
 }
 
@@ -121,15 +119,6 @@ impl MetricsListener {
                     stage_metrics.entities_total.set(total as f64);
                 }
             }
-            MetricEvent::ExecutionStageGas { gas } => self
-                .sync_metrics
-                .execution_stage
-                .mgas_processed_total
-                .increment(gas as f64 / MGAS_TO_GAS as f64),
-            #[cfg(feature = "open_performance_dashboard")]
-            MetricEvent::ExecutionStageTxs { txs } => {
-                self.sync_metrics.execution_stage.txs_processed_total.increment(txs)
-            }
             #[cfg(feature = "open_execution_duration_record")]
             MetricEvent::ExecutionStageTime {
                 execute_inner,
@@ -160,6 +149,14 @@ impl MetricsListener {
                     .execution_stage
                     .write_to_db_time
                     .increment(convert_to_nanoseconds(write_to_db, cpu_frequency));
+            }
+            #[cfg(feature = "open_tps_gas_record")]
+            MetricEvent::BlockTpsAndGas {txs, gas } => {
+                self.sync_metrics.execution_stage.txs_processed_total.increment(txs);
+                self.sync_metrics
+                    .execution_stage
+                    .mgas_processed_total
+                    .increment(gas as f64 / MGAS_TO_GAS as f64);
             }
         }
     }
