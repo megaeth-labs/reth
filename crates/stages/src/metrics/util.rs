@@ -1,5 +1,3 @@
-
-#[cfg(feature = "enable_execution_duration_record")]
 #[derive(Debug, Default)]
 pub(crate) struct ExecutionDurationRecord {
     /// execute inner time recorder
@@ -19,7 +17,6 @@ pub(crate) struct ExecutionDurationRecord {
     pub(crate) write_to_db: u64,
 }
 
-#[cfg(feature = "enable_execution_duration_record")]
 impl ExecutionDurationRecord {
     /// start inner time recorder
     pub(crate) fn start_inner_time_recorder(&mut self) {
