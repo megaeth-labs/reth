@@ -117,7 +117,7 @@ impl MetricsListener {
                     stage_metrics.entities_total.set(total as f64);
                 }
             }
-            
+
             #[cfg(feature = "enable_execution_duration_record")]
             MetricEvent::ExecutionStageTime {
                 execute_inner,
@@ -150,7 +150,7 @@ impl MetricsListener {
                     .increment(convert_to_nanoseconds(write_to_db, cpu_frequency));
             }
             #[cfg(feature = "enable_tps_gas_record")]
-            MetricEvent::BlockTpsAndGas {txs, gas } => {
+            MetricEvent::BlockTpsAndGas { txs, gas } => {
                 self.sync_metrics.execution_stage.txs_processed_total.increment(txs);
                 self.sync_metrics
                     .execution_stage
