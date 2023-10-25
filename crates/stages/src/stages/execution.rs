@@ -222,7 +222,7 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             {
                 println!("");
                 let cachedb_size = executor.get_cachedb_size();
-                println!("cachedb_size = {:?}", cachedb_size);
+                println!("block_number: {:?}, cachedb_size = {:?}", block_number, cachedb_size);
                 println!("");
             }
 
@@ -268,11 +268,10 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         let start = Instant::now();
 
         #[cfg(feature = "enable_db_speed_record")]
-        {
+        let write_to_db_time = {
             db_speed_record.write_to_db_size = u64::try_from(state.size()).unwrap();
-        }
-        #[cfg(feature = "enable_db_speed_record")]
-        let write_to_db_time = Instant::now();
+            Instant::now()
+        };
 
         #[cfg(feature = "enable_execution_duration_record")]
         duration_record.start_time_recorder();

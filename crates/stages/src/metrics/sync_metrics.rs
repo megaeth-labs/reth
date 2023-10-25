@@ -39,7 +39,6 @@ pub(crate) struct ExecutionStageMetrics {
     /// The total amount of transactions processed.
     #[cfg(feature = "enable_tps_gas_record")]
     pub(crate) txs_processed_total: Counter,
-    #[cfg(feature = "open_performance_dashboard")]
     /// Time of execute inner.
     #[cfg(feature = "enable_execution_duration_record")]
     pub(crate) execute_inner_time: Counter,
