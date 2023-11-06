@@ -169,3 +169,6 @@ toml = "0.7"
 proptest = "1.0"
 arbitrary = "1.1"
 assert_matches = "1.5.0"
+
+revm-utils = { git = "https://github.com/megaeth-labs/revm", branch = "andy/debug/performance-dashboard"}
+revm-interpreter = { git = "https://github.com/megaeth-labs/revm", branch = "andy/debug/performance-dashboard"}

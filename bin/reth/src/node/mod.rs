@@ -81,6 +81,10 @@ use std::{
 use tokio::sync::{mpsc::unbounded_channel, oneshot, watch};
 use tracing::*;
 
+#[cfg(feature = "open_performance_dashboard")]
+use crate::performance_metrics::DashboardListener;
+// use crate::performance_metrics::{DashboardEventsSender, DashboardListener};
+
 pub mod cl_events;
 pub mod events;
 
@@ -267,8 +271,20 @@ impl<Ext: RethCliExt> NodeCommand<Ext> {
 
         self.init_trusted_nodes(&mut config);
 
+        #[cfg(feature = "open_performance_dashboard")]
+        let dashboard_tx = {
+            let (dashboard_tx, dashboard_rx) = unbounded_channel();
+            let dashboard_listener = DashboardListener::new(dashboard_rx);
+            ctx.task_executor.spawn_critical("dashboard listener task", dashboard_listener);
+
+            dashboard_tx
+        };
+
         debug!(target: "reth::cli", "Spawning metrics listener task");
         let (metrics_tx, metrics_rx) = unbounded_channel();
+        #[cfg(feature = "open_performance_dashboard")]
+        let metrics_listener = MetricsListener::new(metrics_rx, dashboard_tx);
+        #[cfg(not(feature = "open_performance_dashboard"))]
         let metrics_listener = MetricsListener::new(metrics_rx);
         ctx.task_executor.spawn_critical("metrics listener task", metrics_listener);
 
@@ -945,7 +961,7 @@ fn start_performance_dashboard(task_executor: &TaskExecutor) {
     task_executor.spawn_critical(
         "performance dashboard",
         Box::pin(async move {
-            performance_dashboard_handler.run(3).await;
+            performance_dashboard_handler.run(300).await;
         }),
     );
 }
