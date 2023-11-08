@@ -83,23 +83,23 @@ impl ExecutionDurationRecord {
     /// add
     pub fn add(&mut self, other: ExecutionDurationRecord) {
         self.execute_inner = (
-            self.execute_inner.0 + other.execute_inner.0,
+            self.execute_inner.0.checked_add(other.execute_inner.0).expect("overflow"),
             self.execute_inner.1.checked_add(other.execute_inner.1).expect("overflow"),
         );
         self.read_block = (
-            self.read_block.0 + other.read_block.0,
+            self.read_block.0.checked_add(other.read_block.0).expect("overflow"),
             self.read_block.1.checked_add(other.read_block.1).expect("overflow"),
         );
         self.execute_tx = (
-            self.execute_tx.0 + other.execute_inner.0,
+            self.execute_tx.0.checked_add(other.execute_inner.0).expect("overflow"),
             self.execute_tx.1.checked_add(other.execute_tx.1).expect("overflow"),
         );
         self.process_state = (
-            self.process_state.0 + other.process_state.0,
+            self.process_state.0.checked_add(other.process_state.0).expect("overflow"),
             self.process_state.1.checked_add(other.process_state.1).expect("overflow"),
         );
         self.write_to_db = (
-            self.write_to_db.0 + other.write_to_db.0,
+            self.write_to_db.0.checked_add(other.write_to_db.0).expect("overflow"),
             self.write_to_db.1.checked_add(other.write_to_db.1).expect("overflow"),
         );
     }
@@ -264,7 +264,7 @@ impl DbSpeedRecord {
 
     /// add time of write to db
     pub(crate) fn add_write_to_db_time(&mut self, add_time: Duration, get_time_count: u64) {
-        self.write_to_db_time.0 +=
+        self.write_to_db_time.0 =
             self.write_to_db_time.0.checked_add(get_time_count).expect("overflow");
         self.write_to_db_time.1 = self.write_to_db_time.1.checked_add(add_time).expect("overflow");
     }
