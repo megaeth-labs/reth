@@ -104,8 +104,10 @@ impl DashboardListener {
             }
             #[cfg(feature = "enable_cache_record")]
             MetricEvent::CacheDbSizeInfo { block_number, cachedb_size } => {
-                println!("Block Number       : {:?}", block_number);
-                println!("Cachedb Size(bytes): {:?}\n", cachedb_size);
+                println!(
+                    "Block Number: {:?}, Cachedb Size(bytes): {:?}",
+                    block_number, cachedb_size
+                );
             }
             #[cfg(feature = "enable_cache_record")]
             MetricEvent::CacheDbInfo { cache_db_record } => {

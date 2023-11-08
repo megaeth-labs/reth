@@ -408,28 +408,28 @@ impl CacheDBRecordDisplayer {
         let total_hits_pencentage = total_hits as f64 / total_count as f64;
 
         println!("===============================Hit in CacheDb===========================================================");
-        self.print_header("Hit times", "Hit Percentiles");
+        self.print_header("Hits", "Hit ratio (%)");
         self.print_line(
             "hit_in_basic                 ",
             cache_db_record.hits.hits_in_basic,
-            hits_in_basic_pencentage,
+            hits_in_basic_pencentage * 100.0,
         );
         self.print_line(
             "hit_in_code_by_hash          ",
             cache_db_record.hits.hits_in_code_by_hash,
-            hits_in_code_by_hash_pencentage,
+            hits_in_code_by_hash_pencentage * 100.0,
         );
         self.print_line(
             "hit_in_storage               ",
             cache_db_record.hits.hits_in_storage,
-            hits_in_storage_pencentage,
+            hits_in_storage_pencentage * 100.0,
         );
         self.print_line(
             "hit_in_block_hash            ",
             cache_db_record.hits.hits_in_block_hash,
-            hits_in_block_hash_pencentage,
+            hits_in_block_hash_pencentage * 100.0,
         );
-        self.print_line("total_hit_times       ======>", total_hits, total_hits_pencentage);
+        self.print_line("total hits                   ", total_hits, total_hits_pencentage * 100.0);
 
         let misses_in_basic_pencentage =
             cache_db_record.misses.misses_in_basic as f64 / total_in_basic as f64;
@@ -442,38 +442,42 @@ impl CacheDBRecordDisplayer {
         let total_misses_pencentage = total_miss as f64 / total_count as f64;
 
         println!("===============================Miss in CacheDb===========================================================");
-        self.print_header("Miss times", "Miss Percentiles");
+        self.print_header("Misses", "Miss ratio (%)");
         self.print_line(
             "miss_in_basic                ",
             cache_db_record.misses.misses_in_basic,
-            misses_in_basic_pencentage,
+            misses_in_basic_pencentage * 100.0,
         );
         self.print_line(
             "miss_in_code_by_hash         ",
             cache_db_record.misses.misses_in_code_by_hash,
-            misses_in_code_by_hash_pencentage,
+            misses_in_code_by_hash_pencentage * 100.0,
         );
         self.print_line(
             "miss_in_storage              ",
             cache_db_record.misses.misses_in_storage,
-            misses_in_storage_pencentage,
+            misses_in_storage_pencentage * 100.0,
         );
         self.print_line(
             "miss_in_block_hash           ",
             cache_db_record.misses.misses_in_block_hash,
-            misses_in_block_hash_pencentage,
+            misses_in_block_hash_pencentage * 100.0,
         );
-        self.print_line("total_miss_times       =====>", total_miss, total_misses_pencentage);
+        self.print_line(
+            "total misses                 ",
+            total_miss,
+            total_misses_pencentage * 100.0,
+        );
 
         let col_len = 20;
         let total_penalty_times = cache_db_record.total_penalty_times();
         println!("===============================Misses penalty in CacheDb=================================================");
-        println! {"{:col_len$}{:col_len$}", "CacheDb functions", "Miss penalty_time(seconds)"};
-        println! {"{:col_len$}{:col_len$.3}", "miss_penalty_in_basic(minutes)       ", cache_db_record.penalty.penalty_in_basic.as_secs_f64() / 60.0};
-        println! {"{:col_len$}{:col_len$.3}", "miss_penalty_in_code_by_hash(minutes)", cache_db_record.penalty.penalty_in_code_by_hash.as_secs_f64() / 60.0};
-        println! {"{:col_len$}{:col_len$.3}", "miss_penalty_in_storage(minutes)     ", cache_db_record.penalty.penalty_in_storage.as_secs_f64() / 60.0};
-        println! {"{:col_len$}{:col_len$.3}", "miss_penalty_in_block_hash(minutes)  ", cache_db_record.penalty.penalty_in_block_hash.as_secs_f64() / 60.0};
-        println! {"{:col_len$}{:10.3}", "total_misses_penalty_times(minutes) ==========>", total_penalty_times / 60.0};
+        println! {"CacheDb functions                     Penalty time(min)"};
+        println! {"{:col_len$}{:col_len$.3}", "miss_penalty_in_basic       ", cache_db_record.penalty.penalty_in_basic.as_secs_f64() / 60.0};
+        println! {"{:col_len$}{:col_len$.3}", "miss_penalty_in_code_by_hash", cache_db_record.penalty.penalty_in_code_by_hash.as_secs_f64() / 60.0};
+        println! {"{:col_len$}{:col_len$.3}", "miss_penalty_in_storage     ", cache_db_record.penalty.penalty_in_storage.as_secs_f64() / 60.0};
+        println! {"{:col_len$}{:col_len$.3}", "miss_penalty_in_block_hash  ", cache_db_record.penalty.penalty_in_block_hash.as_secs_f64() / 60.0};
+        println! {"{:col_len$}{:col_len$.3}", "total penalty time          ", total_penalty_times / 60.0};
 
         println!();
     }
