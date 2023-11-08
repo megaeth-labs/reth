@@ -77,12 +77,12 @@ impl OpcodeStats {
     fn print_summay(&self, header: &str) {
         println!("\n");
         println!("{}", header);
-        println!("Total Count     : {:>20}", self.total_count);
-        println!("Total Time (s)  : {:>20.2}", self.total_duration.as_secs_f64());
-        println!(
-            "Ave   Cost (ns) : {:>20.1}",
-            self.total_duration.as_nanos() as f64 / self.total_count as f64
-        );
+        // println!("Total Count     : {:>20}", self.total_count);
+        // println!("Total Time (s)  : {:>20.2}", self.total_duration.as_secs_f64());
+        // println!(
+        //     "Ave   Cost (ns) : {:>20.1}",
+        //     self.total_duration.as_nanos() as f64 / self.total_count as f64
+        // );
         println!("");
     }
 
@@ -118,7 +118,7 @@ impl OpcodeStats {
             self.total_count,
             100f64,
             self.total_duration.as_secs_f64(),
-            self.total_duration_percent,
+            self.total_duration_percent * 100.0,
             self.total_gas,
             100f64,
             avg_cost,
