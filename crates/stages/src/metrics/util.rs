@@ -150,18 +150,45 @@ impl ExecutionDurationRecord {
 
     /// print the information of the execution duration record.
     pub fn print(&self, header: &str) {
+        let one_hour_sencods = 60.0 * 60.0;
+
+        let execute_inner_time = self.execute_inner.1.as_secs_f64() / one_hour_sencods;
+
+        let read_block_time = self.read_block.1.as_secs_f64() / one_hour_sencods;
+        let execute_tx_time = self.execute_tx.1.as_secs_f64() / one_hour_sencods;
+        let process_state_time = self.process_state.1.as_secs_f64() / one_hour_sencods;
+        let write_to_db_time = self.write_to_db.1.as_secs_f64() / one_hour_sencods;
+
+        let read_block_pct = read_block_time / execute_inner_time * 100.0;
+        let execute_tx_pct = execute_tx_time / execute_inner_time * 100.0;
+        let process_state_pct = process_state_time / execute_inner_time * 100.0;
+        let write_to_db_pct = write_to_db_time / execute_inner_time * 100.0;
+        let total_pct = read_block_pct + execute_tx_pct + process_state_pct + write_to_db_pct;
+
+        let time_decimal_place = 6;
+        let pct_decimal_place = 3;
+
         println!();
         println!("{}", header);
-        println!("Time Of Execute Inner(ns)    : {}", self.execute_inner.1.as_nanos());
-        println!("Time Of Read Block(ns)       : {}", self.read_block.1.as_nanos());
-        println!("Time Of Extend PostState(ns) : {}", self.process_state.1.as_nanos());
         println!(
-            "Time Of Executes The Block And Checks Receipts (ns) : {}",
-            self.execute_tx.1.as_nanos()
+            "total           : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            execute_inner_time, total_pct
         );
         println!(
-            "Time Of Write The Post State To The Database(ns)    : {}",
-            self.write_to_db.1.as_nanos()
+            "fetching_blocks : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            read_block_time, read_block_pct
+        );
+        println!(
+            "execution       : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            execute_tx_time, execute_tx_pct
+        );
+        println!(
+            "process_state   : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            process_state_time, process_state_pct
+        );
+        println!(
+            "write_to_db     : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            write_to_db_time, write_to_db_pct
         );
         println!();
     }
