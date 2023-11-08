@@ -487,7 +487,7 @@ impl CacheDBRecordDisplayer {
 #[derive(Debug)]
 pub(crate) struct TpsAndGasRecordDisplayer {
     pub(crate) delta_txs: u128,
-    pub(crate) delta_mgas: u128,
+    pub(crate) delta_gas: u128,
 
     pub(crate) last_instant: minstant::Instant,
 }
@@ -498,7 +498,7 @@ impl TpsAndGasRecordDisplayer {
 
     pub(crate) fn update_tps_and_gas(&mut self, block_number: u64, txs: u64, gas: u64) {
         self.delta_txs = self.delta_txs.checked_add(txs as u128).expect("overflow");
-        self.delta_mgas = self.delta_mgas.checked_add(gas as u128).expect("overflow");
+        self.delta_gas = self.delta_gas.checked_add(gas as u128).expect("overflow");
 
         if 0 == block_number % Self::N {
             self.print();
@@ -508,10 +508,10 @@ impl TpsAndGasRecordDisplayer {
     pub(crate) fn print(&mut self) {
         let elapsed_ns = self.last_instant.elapsed().as_nanos();
         let tps = self.delta_txs.mul(1000_000_000).div(elapsed_ns);
-        let mgas_ps = (self.delta_mgas as f64).mul(1000_000_000 as f64).div(elapsed_ns as f64);
+        let mgas_ps = (self.delta_gas as f64).mul(1000_000_000 as f64).div(elapsed_ns as f64);
 
         self.delta_txs = 0;
-        self.delta_mgas = 0;
+        self.delta_gas = 0;
         self.last_instant = Instant::now();
 
         println!("\n===============================Metric of tps and gas==========================================================");
@@ -522,7 +522,7 @@ impl TpsAndGasRecordDisplayer {
 
     pub(crate) fn start_record(&mut self) {
         self.delta_txs = 0;
-        self.delta_mgas = 0;
+        self.delta_gas = 0;
         self.last_instant = Instant::now();
     }
 
@@ -534,6 +534,6 @@ impl TpsAndGasRecordDisplayer {
 #[cfg(feature = "enable_tps_gas_record")]
 impl Default for TpsAndGasRecordDisplayer {
     fn default() -> Self {
-        Self { delta_txs: 0, delta_mgas: 0, last_instant: Instant::now() }
+        Self { delta_txs: 0, delta_gas: 0, last_instant: Instant::now() }
     }
 }
