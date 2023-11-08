@@ -46,14 +46,6 @@ pub enum MetricEvent {
         /// Gas processed.
         gas: u64,
     },
-    // /// Revm metric record.
-    // #[cfg(feature = "enable_opcode_metrics")]
-    // RevmMetricRecord {
-    //     /// Revm metric record.
-    //     record: RevmMetricRecord,
-    //     /// size of cacheDb.
-    //     cachedb_size: usize,
-    // },
     /// Execution stage processed .
     #[cfg(feature = "enable_execution_duration_record")]
     ExecutionStageTime {

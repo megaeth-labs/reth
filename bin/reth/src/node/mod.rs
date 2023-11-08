@@ -83,7 +83,6 @@ use tracing::*;
 
 #[cfg(feature = "open_performance_dashboard")]
 use crate::performance_metrics::DashboardListener;
-// use crate::performance_metrics::{DashboardEventsSender, DashboardListener};
 
 pub mod cl_events;
 pub mod events;
@@ -250,11 +249,6 @@ impl<Ext: RethCliExt> NodeCommand<Ext> {
         info!(target: "reth::cli", "Database opened");
 
         self.start_metrics_endpoint(Arc::clone(&db)).await?;
-
-        #[cfg(feature = "open_performance_dashboard")]
-        {
-            start_performance_dashboard(&ctx.task_executor);
-        }
 
         debug!(target: "reth::cli", chain=%self.chain.chain, genesis=?self.chain.genesis_hash(), "Initializing genesis");
 
@@ -945,25 +939,6 @@ async fn run_network_until_shutdown<C>(
             }
         }
     }
-}
-
-#[cfg(feature = "open_performance_dashboard")]
-fn start_performance_dashboard(task_executor: &TaskExecutor) {
-    use crate::performance_metrics::{metric_handler::*, metric_recoder::*, metric_storage::*};
-
-    let storage = Arc::new(PerformanceDashboardMetricStorage::default());
-
-    let recorder = PerformanceDashboardRecorder::new(storage.clone());
-    metrics::set_boxed_recorder(Box::new(recorder)).unwrap();
-
-    let mut performance_dashboard_handler = PerformanceDashboardMetricHandler::new(storage);
-
-    task_executor.spawn_critical(
-        "performance dashboard",
-        Box::pin(async move {
-            performance_dashboard_handler.run(300).await;
-        }),
-    );
 }
 
 #[cfg(test)]

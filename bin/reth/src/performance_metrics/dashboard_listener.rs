@@ -11,8 +11,6 @@ use reth_stages::MetricEvent;
 
 #[cfg(feature = "enable_opcode_metrics")]
 use super::dashboard_display::RevmMetricTimeDisplayer;
-// #[cfg(feature = "enable_opcode_metrics")]
-// use revm_utils::types::RevmMetricRecord;
 
 #[cfg(feature = "enable_execution_duration_record")]
 use super::dashboard_display::ExecutionDurationDisplayer;

@@ -5226,7 +5226,6 @@ dependencies = [
  "metrics-process",
  "metrics-util",
  "minstant",
- "parking_lot 0.12.1",
  "pin-project",
  "pretty_assertions",
  "proptest",

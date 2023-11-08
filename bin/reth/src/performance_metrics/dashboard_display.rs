@@ -80,7 +80,7 @@ impl OpcodeStats {
         // println!("Total Count     : {:>20}", self.total_count);
         // println!("Total Time (s)  : {:>20.2}", self.total_duration.as_secs_f64());
         // println!(
-        //     "Ave   Cost (ns) : {:>20.1}",
+        //     "Avg   Cost (ns) : {:>20.1}",
         //     self.total_duration.as_nanos() as f64 / self.total_count as f64
         // );
         println!("");
@@ -326,8 +326,9 @@ impl ExecutionDurationDisplayer {
     pub(crate) fn print(&self) {
         self.excution_duration_record.print("===============================Metric of execution duration==========================================================");
 
-        let pure_record = self.excution_duration_record.pure_record();
-        pure_record.print("===============================Metric of pure execution duration==========================================================");
+        // let pure_record = self.excution_duration_record.pure_record();
+        // pure_record.print("===============================Metric of pure execution
+        // duration==========================================================");
     }
 }
 
@@ -378,7 +379,7 @@ impl CacheDBRecordDisplayer {
         let col_percentage_len = 20;
 
         println!(
-            "{:col_funciotns_len$}{:col_times_len$}{:col_percentage_len$.3}",
+            "{:col_funciotns_len$}{:>col_times_len$}{:>col_percentage_len$.3}",
             function, times, percentiles
         );
     }

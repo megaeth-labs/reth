@@ -1,5 +1,4 @@
 use revm_interpreter::opcode::*;
-// use std::collections::HashMap;
 
 pub(crate) const OPCODE_NUMBER: usize = std::u8::MAX as usize + 1;
 

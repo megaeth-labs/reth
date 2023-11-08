@@ -165,29 +165,31 @@ impl ExecutionDurationRecord {
         let write_to_db_pct = write_to_db_time / execute_inner_time * 100.0;
         let total_pct = read_block_pct + execute_tx_pct + process_state_pct + write_to_db_pct;
 
-        let time_decimal_place = 6;
+        let time_decimal_place = 3;
         let pct_decimal_place = 3;
+        let col_len = 15;
 
         println!();
         println!("{}", header);
+        println!("Cat.                    Time (h)              Time (%)");
         println!(
-            "total           : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            "total            {:>col_len$.time_decimal_place$}      {:>col_len$.pct_decimal_place$}",
             execute_inner_time, total_pct
         );
         println!(
-            "fetching_blocks : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            "fetching_blocks  {:>col_len$.time_decimal_place$}      {:>col_len$.pct_decimal_place$}",
             read_block_time, read_block_pct
         );
         println!(
-            "execution       : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            "execution        {:>col_len$.time_decimal_place$}      {:>col_len$.pct_decimal_place$}",
             execute_tx_time, execute_tx_pct
         );
         println!(
-            "process_state   : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            "process_state    {:>col_len$.time_decimal_place$}      {:>col_len$.pct_decimal_place$}",
             process_state_time, process_state_pct
         );
         println!(
-            "write_to_db     : {:.time_decimal_place$}, percentage: {:.pct_decimal_place$}",
+            "write_to_db      {:>col_len$.time_decimal_place$}      {:>col_len$.pct_decimal_place$}",
             write_to_db_time, write_to_db_pct
         );
         println!();
@@ -377,9 +379,12 @@ impl DbSpeedRecord {
         let write_to_db_rate = write_to_db_size / write_to_db_time;
 
         println!("Cat.                           Size (MBytes)   Time (s)   Rate (MBytes/s)");
-        println! {"{:col_len$}{:col_len$.3}{:col_len$.3}{:col_len$.3}", "Read header td         ", read_header_td_size, read_header_td_time, read_header_td_rate};
-        println! {"{:col_len$}{:col_len$.3}{:col_len$.3}{:col_len$.3}", "Read header with sender", read_block_with_senders_size, read_block_with_senders_time, read_block_with_senders_rate};
-        println! {"{:col_len$}{:col_len$.3}{:col_len$.3}{:col_len$.3}", "Write to db            ", write_to_db_size, write_to_db_time, write_to_db_rate};
+        println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "Read header td         ",
+        read_header_td_size, read_header_td_time, read_header_td_rate};
+        println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "Read header with sender",
+        read_block_with_senders_size, read_block_with_senders_time, read_block_with_senders_rate};
+        println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "Write to db            ",
+        write_to_db_size, write_to_db_time, write_to_db_rate};
 
         println!();
     }
