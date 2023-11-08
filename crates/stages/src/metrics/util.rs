@@ -333,37 +333,26 @@ impl DbSpeedRecord {
         println!();
         println!("{}", header);
 
-        let precise = 3;
+        let col_len = 15;
 
         let read_header_td_time = self.read_header_td_db_time.1.as_secs_f64();
         let read_header_td_size = self.cover_size_bytes_to_m(self.read_header_td_db_size);
         let read_header_td_rate = read_header_td_size / read_header_td_time;
-        println!("Time Of Read Header TD(second)     : {:.precise$}", read_header_td_time);
-        println!("DB Size Of Read Header TD(Mbytes)  : {:.precise$}", read_header_td_size);
-        println!("Rate Of Read Header TD(M/s)        : {:.precise$}", read_header_td_rate);
 
         let read_block_with_senders_time = self.read_block_with_senders_db_time.1.as_secs_f64();
         let read_block_with_senders_size =
             self.cover_size_bytes_to_m(self.read_block_with_senders_db_size);
         let read_block_with_senders_rate =
             read_block_with_senders_size / read_block_with_senders_time;
-        println!(
-            "Time Of Read Block With Sender(second)   : {:.precise$}",
-            read_block_with_senders_time
-        );
-        println!(
-            "DB Size Of Read Block With Sender(Mbytes): {:.precise$}",
-            read_block_with_senders_size
-        );
-        println!("Rate Of Read Block With Sender(M/s)      : {:.3}", read_block_with_senders_rate);
 
         let write_to_db_time = self.write_to_db_time.1.as_secs_f64();
         let write_to_db_size = self.cover_size_bytes_to_m(self.write_to_db_size);
         let write_to_db_rate = write_to_db_size / write_to_db_time;
 
-        println!("Time Of Write To DB(second)         : {:.precise$}", write_to_db_time);
-        println!("DB Size Of Write To DB(Mbytes)      : {:.precise$}", self.write_to_db_size);
-        println!("Rate Of Write To DB(M/s)            : {:.precise$}", write_to_db_rate);
+        println!("Cat.                           Size (MBytes)   Time (s)   Rate (MBytes/s)");
+        println! {"{:col_len$}{:col_len$.3}{:col_len$.3}{:col_len$.3}", "Read header td         ", read_header_td_size, read_header_td_time, read_header_td_rate};
+        println! {"{:col_len$}{:col_len$.3}{:col_len$.3}{:col_len$.3}", "Read header with sender", read_block_with_senders_size, read_block_with_senders_time, read_block_with_senders_rate};
+        println! {"{:col_len$}{:col_len$.3}{:col_len$.3}{:col_len$.3}", "Write to db            ", write_to_db_size, write_to_db_time, write_to_db_rate};
 
         println!();
     }
