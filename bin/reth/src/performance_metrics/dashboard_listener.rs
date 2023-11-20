@@ -49,6 +49,7 @@ impl DashboardListener {
     pub(crate) fn new(events_rx: UnboundedReceiver<MetricEvent>) -> Self {
         Self {
             events_rx,
+
             #[cfg(feature = "enable_opcode_metrics")]
             revm_metric_displayer: RevmMetricTimeDisplayer::default(),
 
