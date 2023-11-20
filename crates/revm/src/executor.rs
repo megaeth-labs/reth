@@ -263,7 +263,7 @@ where
 
             #[cfg(feature = "enable_opcode_metrics")]
             {
-                let mut revm_metric_record = revm_utils::instrument::get_record();
+                let mut revm_metric_record = revm_utils::metric::get_record();
                 if revm_metric_record.not_empty() {
                     self.revm_metric_record.update(&mut revm_metric_record);
                 }

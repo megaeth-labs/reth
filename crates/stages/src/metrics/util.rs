@@ -3,7 +3,9 @@ use minstant::Instant;
 #[cfg(any(feature = "enable_execution_duration_record", feature = "enable_db_speed_record"))]
 use std::time::Duration;
 
+#[cfg(feature = "enable_execution_duration_record")]
 pub(crate) const COL_WIDTH_MIDDLE: usize = 14;
+#[cfg(feature = "enable_execution_duration_record")]
 pub(crate) const COL_WIDTH_BIG: usize = 18;
 
 /// excution duration record
