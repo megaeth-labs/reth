@@ -1,19 +1,21 @@
 #[cfg(feature = "enable_opcode_metrics")]
 use super::dashboard_opcode::*;
 #[cfg(feature = "enable_opcode_metrics")]
-use lazy_static::lazy_static;
-#[cfg(feature = "enable_tps_gas_record")]
-use minstant::Instant;
-#[cfg(feature = "enable_opcode_metrics")]
 use revm::OpCode;
+#[cfg(any(feature = "enable_opcode_metrics", feature = "enable_cache_record"))]
+use revm_utils::time_utils::convert_cycles_to_duration;
 #[cfg(feature = "enable_opcode_metrics")]
-use revm_utils::time_utils::{convert_cycles_to_duration, convert_cycles_to_ns_f64};
-#[cfg(feature = "enable_opcode_metrics")]
-use revm_utils::types::RevmMetricRecord;
+use revm_utils::{time_utils::convert_cycles_to_ns_f64, types::RevmMetricRecord};
 #[cfg(feature = "enable_opcode_metrics")]
 use std::collections::BTreeMap;
-#[cfg(feature = "enable_opcode_metrics")]
-use std::collections::HashMap;
+
+#[cfg(feature = "enable_cache_record")]
+use revm_utils::types::CacheDbRecord;
+
+#[cfg(feature = "enable_tps_gas_record")]
+use minstant::Instant;
+#[cfg(feature = "enable_tps_gas_record")]
+use std::ops::{Div, Mul};
 
 #[cfg(feature = "enable_execution_duration_record")]
 use reth_stages::ExecutionDurationRecord;
@@ -21,27 +23,17 @@ use reth_stages::ExecutionDurationRecord;
 #[cfg(feature = "enable_db_speed_record")]
 use reth_stages::DbSpeedRecord;
 
+#[cfg(feature = "enable_opcode_metrics")]
+const MGAS_TO_GAS: u64 = 1_000_000u64;
+#[cfg(any(feature = "enable_opcode_metrics", feature = "enable_cache_record"))]
+const COL_WIDTH_MIDDLE: usize = 14;
 #[cfg(feature = "enable_cache_record")]
-use revm_utils::types::CacheDbRecord;
-
-#[cfg(feature = "enable_tps_gas_record")]
-use std::ops::{Div, Mul};
-
-#[cfg(feature = "enable_opcode_metrics")]
-lazy_static! {
-    static ref OPCODE_DES_MAP: HashMap<u8, OpcodeInfo> = MERGE_MAP.iter().copied().collect();
-}
+const COL_WIDTH_BIG: usize = 20;
+#[cfg(feature = "enable_cache_record")]
+const COL_WIDTH_LARGE: usize = 30;
 
 #[cfg(feature = "enable_opcode_metrics")]
-pub(crate) const MGAS_TO_GAS: u64 = 1_000_000u64;
-
-pub(crate) const COL_WIDTH_MIDDLE: usize = 14;
-// pub(crate) const COL_WIDTH_BIG: usize = 20;
-// pub(crate) const COL_WIDTH_LARGE: usize = 30;
-
-#[cfg(feature = "enable_opcode_metrics")]
-#[derive(Debug)]
-pub(crate) struct OpcodeMergeRecord {
+struct OpcodeMergeRecord {
     count: u64,
     duration: u64,
     count_percent: f64,
@@ -50,10 +42,9 @@ pub(crate) struct OpcodeMergeRecord {
 }
 
 #[cfg(feature = "enable_opcode_metrics")]
-#[derive(Debug)]
 pub(crate) struct OpcodeStats {
     total_count: u64,
-    total_duration:  u64,
+    total_duration: u64,
     total_duration_percent: f64,
     count_percent: [f64; OPCODE_NUMBER],
     duration_percent: [f64; OPCODE_NUMBER],
@@ -74,12 +65,8 @@ impl OpcodeStats {
         println!("\n");
     }
 
-    fn base_gas(&self, opcode: u8) -> u64 {
-        if !OPCODE_DES_MAP.contains_key(&opcode) {
-            return 0u64
-        }
-
-        OPCODE_DES_MAP.get(&opcode).unwrap().gas
+    fn base_gas(&self, opcode: u8) -> Option<u64> {
+        Some(MERGE_MAP[opcode as usize]?.1.gas)
     }
 
     fn print_header(&self) {
@@ -144,9 +131,6 @@ impl OpcodeStats {
 
         for i in 0..OPCODE_NUMBER {
             let op = i as u8;
-            if !OPCODE_DES_MAP.contains_key(&op) {
-                continue
-            }
             let opcode_jump = OpCode::try_from_u8(op);
             if opcode_jump.is_none() {
                 continue
@@ -161,7 +145,7 @@ impl OpcodeStats {
                 self.ave_cost[i],
                 self.opcode_gas[i].0,
                 self.opcode_gas[i].1 * 100.0,
-                self.base_gas(op),
+                self.base_gas(op).unwrap_or(0),
             );
         }
     }
@@ -221,25 +205,21 @@ impl RevmMetricTimeDisplayer {
         self.revm_metric_record.update(record);
     }
 
-    fn category_name(&self, opcode: u8) -> &'static str {
-        if OPCODE_DES_MAP.contains_key(&opcode) {
-            return OPCODE_DES_MAP.get(&opcode).unwrap().category
-        }
-
-        return &"unknow"
+    fn category_name(&self, opcode: u8) -> Option<&'static str> {
+        Some(MERGE_MAP[opcode as usize]?.1.category)
     }
 
     fn caculate_gas(&self, opcode: u8, record: &(u64, u64, i128)) -> f64 {
-        if !OPCODE_DES_MAP.contains_key(&opcode) {
-            return 0.0
+        let (base_gas, static_gas) = match MERGE_MAP[opcode as usize] {
+            Some(opcode_info) => (opcode_info.1.gas, opcode_info.1.static_gas),
+            None => return 0.0,
+        };
+
+        if static_gas {
+            return base_gas.checked_mul(record.0).unwrap_or(0) as f64
         }
 
-        let opcode_info = OPCODE_DES_MAP.get(&opcode).unwrap();
-        if opcode_info.static_gas {
-            return opcode_info.gas.checked_mul(record.0).unwrap_or(0) as f64
-        }
-
-        return record.2 as f64
+        record.2 as f64
     }
 
     pub(crate) fn stats(&self, metric_record: &RevmMetricRecord) -> OpcodeStats {
@@ -250,7 +230,10 @@ impl RevmMetricTimeDisplayer {
 
         for (i, v) in metric_record.opcode_record.iter().enumerate() {
             total_count = total_count.checked_add(v.0).expect("overflow");
-            let cat = self.category_name(i as u8);
+            let cat = match self.category_name(i as u8) {
+                Some(name) => name,
+                None => continue,
+            };
 
             merge_records
                 .entry(cat)
@@ -358,12 +341,20 @@ impl DBSpeedDisplayer {
 #[derive(Default, Debug)]
 pub(crate) struct CacheDBRecordDisplayer {
     cache_db_record: CacheDbRecord,
+    pre_db_size: usize,
 }
 
 #[cfg(feature = "enable_cache_record")]
 impl CacheDBRecordDisplayer {
     pub(crate) fn update_cache_db_record(&mut self, record: CacheDbRecord) {
         self.cache_db_record.update(&record);
+    }
+
+    pub(crate) fn update_size(&mut self, block_number: u64, cachedb_size: usize) {
+        if self.pre_db_size != cachedb_size {
+            println!("Block Number: {:?}, Cachedb Size(bytes): {:?}", block_number, cachedb_size);
+            self.pre_db_size = cachedb_size;
+        }
     }
 
     // fn print_header(&self, times_name: &str, percentiles_name: &str) {
@@ -382,23 +373,26 @@ impl CacheDBRecordDisplayer {
     }
 
     fn misses_in_basic_pencentage(&self) -> f64 {
-        self.cache_db_record.misses.misses_in_basic as f64 /
-            self.cache_db_record.total_in_basic() as f64
+        self.cache_db_record.misses.basic as f64 / self.cache_db_record.total_in_basic() as f64
     }
 
     fn misses_in_code_by_hash_pencentage(&self) -> f64 {
-        self.cache_db_record.misses.misses_in_code_by_hash as f64 /
+        self.cache_db_record.misses.code_by_hash as f64 /
             self.cache_db_record.total_in_code_by_hash() as f64
     }
 
     fn misses_in_storage_pencentage(&self) -> f64 {
-        self.cache_db_record.misses.misses_in_storage as f64 /
-            self.cache_db_record.total_in_storage() as f64
+        self.cache_db_record.misses.storage as f64 / self.cache_db_record.total_in_storage() as f64
     }
 
     fn misses_in_block_hash_pencentage(&self) -> f64 {
-        self.cache_db_record.misses.misses_in_block_hash as f64 /
+        self.cache_db_record.misses.block_hash as f64 /
             self.cache_db_record.total_in_block_hash() as f64
+    }
+
+    fn misses_in_load_account_pencentage(&self) -> f64 {
+        self.cache_db_record.misses.load_account as f64 /
+            self.cache_db_record.total_in_load_account() as f64
     }
 
     fn total_misses_pencentage(&self) -> f64 {
@@ -407,8 +401,6 @@ impl CacheDBRecordDisplayer {
     }
 
     pub(crate) fn print(&self) {
-        let cache_db_record = &self.cache_db_record;
-
         println!("===============================Metric of CacheDb========================================================");
         println!("===============================Hit in CacheDb===========================================================");
         println!(
@@ -417,49 +409,72 @@ impl CacheDBRecordDisplayer {
         );
         self.print_line(
             "in_basic",
-            self.cache_db_record.hits.hits_in_basic,
-            self.cache_db_record.misses.misses_in_basic,
+            self.cache_db_record.hits.basic,
+            self.cache_db_record.misses.basic,
             self.misses_in_basic_pencentage(),
         );
 
         self.print_line(
             "in_code_by_hash",
-            self.cache_db_record.hits.hits_in_code_by_hash,
-            self.cache_db_record.misses.misses_in_code_by_hash,
+            self.cache_db_record.hits.code_by_hash,
+            self.cache_db_record.misses.code_by_hash,
             self.misses_in_code_by_hash_pencentage(),
         );
 
         self.print_line(
             "in_storage",
-            self.cache_db_record.hits.hits_in_storage,
-            self.cache_db_record.misses.misses_in_storage,
+            self.cache_db_record.hits.storage,
+            self.cache_db_record.misses.storage,
             self.misses_in_storage_pencentage(),
         );
 
         self.print_line(
             "in_block_hash",
-            self.cache_db_record.hits.hits_in_block_hash,
-            self.cache_db_record.misses.misses_in_block_hash,
+            self.cache_db_record.hits.block_hash,
+            self.cache_db_record.misses.block_hash,
             self.misses_in_block_hash_pencentage(),
         );
 
         self.print_line(
-            "in_block_hash",
+            "load_account",
+            self.cache_db_record.hits.load_account,
+            self.cache_db_record.misses.load_account,
+            self.misses_in_load_account_pencentage(),
+        );
+
+        self.print_line(
+            "total",
             self.cache_db_record.total_hits(),
             self.cache_db_record.total_miss(),
             self.total_misses_pencentage(),
         );
 
-        let total_penalty_times = cache_db_record.total_penalty_times();
+        let total_penalty_times = self.cache_db_record.total_penalty_times();
         println!("===============================Misses penalty in CacheDb=================================================");
         println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}", "CacheDb functions", "Penalty time(min)"};
-        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "miss_penalty_in_basic       ", cache_db_record.penalty.penalty_in_basic.as_secs_f64() / 60.0};
-        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "miss_penalty_in_code_by_hash", cache_db_record.penalty.penalty_in_code_by_hash.as_secs_f64() / 60.0};
-        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "miss_penalty_in_storage     ", cache_db_record.penalty.penalty_in_storage.as_secs_f64() / 60.0};
-        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "miss_penalty_in_block_hash  ", cache_db_record.penalty.penalty_in_block_hash.as_secs_f64() / 60.0};
-        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "total penalty time          ", total_penalty_times / 60.0};
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "miss_penalty_in_basic       ", convert_cycles_to_duration(self.cache_db_record.penalty.basic).as_secs_f64() / 60.0};
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "miss_penalty_in_code_by_hash", convert_cycles_to_duration(self.cache_db_record.penalty.code_by_hash).as_secs_f64() / 60.0};
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "miss_penalty_in_storage     ", convert_cycles_to_duration(self.cache_db_record.penalty.storage).as_secs_f64() / 60.0};
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "miss_penalty_in_block_hash  ", convert_cycles_to_duration(self.cache_db_record.penalty.block_hash).as_secs_f64() / 60.0};
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "miss_penalty_in_load_account", convert_cycles_to_duration(self.cache_db_record.penalty.load_account).as_secs_f64() / 60.0};
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "total penalty time          ", convert_cycles_to_duration(total_penalty_times).as_secs_f64() / 60.0};
 
         println!();
+        println!();
+        let total_us_count = self.cache_db_record.total_miss();
+        println!("========================================Penalty percentile ===============================================");
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}", "time (us)", "Count (%)"};
+        for (i, v) in self.cache_db_record.penalty.us_percentile.iter().enumerate() {
+            println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.6}", i+1, (*v * 100) as f64 / total_us_count as f64};
+        }
+        println!();
+        println!();
+        let total_ns_count = self.cache_db_record.penalty.us_percentile[0];
+        println!("========================================Penalty percentile ===============================================");
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}", "time (ns)", "Count (%)"};
+        for (i, v) in self.cache_db_record.penalty.ns_percentile.iter().enumerate() {
+            println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.6}", i+1, (*v * 100) as f64 / total_ns_count as f64};
+        }
     }
 }
 
@@ -468,7 +483,6 @@ impl CacheDBRecordDisplayer {
 pub(crate) struct TpsAndGasRecordDisplayer {
     pub(crate) delta_txs: u128,
     pub(crate) delta_gas: u128,
-
     pub(crate) last_instant: minstant::Instant,
 }
 

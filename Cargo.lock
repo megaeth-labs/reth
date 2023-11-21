@@ -127,14 +127,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "alloc"
-version = "0.1.0"
-source = "git+https://github.com/anonymousGiga/use-alloc2#59f527bd25a252e891aea816359657b63c7b3981"
-dependencies = [
- "allocator-api2",
-]
-
-[[package]]
 name = "alloc-no-stdlib"
 version = "2.0.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5230,7 +5222,6 @@ dependencies = [
  "hyper",
  "jemalloc-ctl",
  "jemallocator",
- "lazy_static",
  "metrics",
  "metrics-exporter-prometheus",
  "metrics-process",
@@ -6239,34 +6230,31 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "3.3.0"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#1253e88d31aa958c8a7914f6aa57bd506513f9fa"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#3ed145c0cd0856e2b3c85f0a100f351957753fbb"
 dependencies = [
- "alloc",
  "auto_impl",
- "minstant",
  "revm-interpreter",
  "revm-precompile",
  "revm-utils",
+ "tracking-allocator",
 ]
 
 [[package]]
 name = "revm-interpreter"
 version = "1.1.2"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#1253e88d31aa958c8a7914f6aa57bd506513f9fa"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#3ed145c0cd0856e2b3c85f0a100f351957753fbb"
 dependencies = [
  "derive_more",
  "enumn",
- "minstant",
  "revm-primitives",
  "revm-utils",
  "sha3",
- "tracing",
 ]
 
 [[package]]
 name = "revm-precompile"
 version = "2.0.3"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#1253e88d31aa958c8a7914f6aa57bd506513f9fa"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#3ed145c0cd0856e2b3c85f0a100f351957753fbb"
 dependencies = [
  "k256",
  "num",
@@ -6282,7 +6270,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "1.1.2"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#1253e88d31aa958c8a7914f6aa57bd506513f9fa"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#3ed145c0cd0856e2b3c85f0a100f351957753fbb"
 dependencies = [
  "arbitrary",
  "auto_impl",
@@ -6306,10 +6294,9 @@ dependencies = [
 [[package]]
 name = "revm-utils"
 version = "0.1.0"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#1253e88d31aa958c8a7914f6aa57bd506513f9fa"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#3ed145c0cd0856e2b3c85f0a100f351957753fbb"
 dependencies = [
  "ctor 0.2.5",
- "minstant",
  "serde",
  "serde_arrays",
  "serde_json",
@@ -7871,6 +7858,16 @@ dependencies = [
  "tracing",
  "tracing-core",
  "tracing-log",
+]
+
+[[package]]
+name = "tracking-allocator"
+version = "0.1.0"
+source = "git+https://github.com/anonymousGiga/tracking-allocator#3d1b67de29d8ed377d70ff3ec334894282aa0c77"
+dependencies = [
+ "allocator-api2",
+ "hashbrown 0.14.1",
+ "rand 0.8.5",
 ]
 
 [[package]]
