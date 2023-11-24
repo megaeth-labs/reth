@@ -73,8 +73,8 @@ pub mod abstraction;
 
 mod implementation;
 
-#[cfg(feature = "enable_db_speed_record")]
 /// for metric
+#[cfg(feature = "enable_db_speed_record")]
 pub mod metric;
 
 pub mod tables;

@@ -156,46 +156,29 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             duration_record.start_time_recorder();
 
             #[cfg(feature = "enable_db_speed_record")]
-            let (td, block) = {
-                #[cfg(feature = "enable_db_speed_record")]
-                start_reth_db_record();
+            start_reth_db_record();
 
-                let td = provider
-                    .header_td_by_number(block_number)?
-                    .ok_or_else(|| ProviderError::HeaderNotFound(block_number.into()))?;
-
-                #[cfg(feature = "enable_db_speed_record")]
-                {
-                    let (read_size, read_time, _, _) = get_reth_db_record();
-                    db_speed_record.add_read_header_td_db_record(read_size as u64, read_time);
-
-                    start_reth_db_record();
-                }
-
-                let block = provider
-                    .block_with_senders(block_number)?
-                    .ok_or_else(|| ProviderError::BlockNotFound(block_number.into()))?;
-
-                // db_speed_record.add_read_block_with_senders_db_time(db_time, get_time_count);
-
-                #[cfg(feature = "enable_db_speed_record")]
-                {
-                    let (read_size, read_time, _, _) = get_reth_db_record();
-                    db_speed_record
-                        .add_read_block_with_senders_db_record(read_size as u64, read_time);
-                }
-
-                (td, block)
-            };
-
-            #[cfg(not(feature = "enable_db_speed_record"))]
             let td = provider
                 .header_td_by_number(block_number)?
                 .ok_or_else(|| ProviderError::HeaderNotFound(block_number.into()))?;
-            #[cfg(not(feature = "enable_db_speed_record"))]
+
+            #[cfg(feature = "enable_db_speed_record")]
+            {
+                let (read_size, read_time, _, _) = get_reth_db_record();
+                db_speed_record.add_read_header_td_db_record(read_size as u64, read_time);
+
+                start_reth_db_record();
+            }
+
             let block = provider
                 .block_with_senders(block_number)?
                 .ok_or_else(|| ProviderError::BlockNotFound(block_number.into()))?;
+
+            #[cfg(feature = "enable_db_speed_record")]
+            {
+                let (read_size, read_time, _, _) = get_reth_db_record();
+                db_speed_record.add_read_block_with_senders_db_record(read_size as u64, read_time);
+            }
 
             #[cfg(feature = "enable_execution_duration_record")]
             duration_record.add_read_block_duration();

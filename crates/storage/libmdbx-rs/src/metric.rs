@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 struct MetricRecoder {
     read_size: usize,
     read_time: Duration,
@@ -8,52 +8,60 @@ struct MetricRecoder {
     write_time: Duration,
 }
 
-static mut METRIC_RECORD: Option<MetricRecoder> = None;
+impl MetricRecoder {
+    pub(crate) const fn new() -> Self {
+        Self { read_size: 0, read_time: Duration::ZERO, write_size: 0, write_time: Duration::ZERO }
+    }
+
+    pub(crate) fn reset(&mut self) {
+        self.read_size = 0;
+        self.read_time = Duration::ZERO;
+        self.write_size = 0;
+        self.write_time = Duration::ZERO;
+    }
+
+    pub(crate) fn add_read_record(&mut self, size: usize, time: Duration) {
+        self.read_size = self.read_size.checked_add(size).expect("overflow");
+        self.read_time = self.read_time.checked_add(time).expect("overflow");
+    }
+
+    pub(crate) fn add_write_record(&mut self, size: usize, time: Duration) {
+        self.write_size = self.write_size.checked_add(size).expect("overflow");
+        self.write_time = self.write_time.checked_add(time).expect("overflow");
+    }
+
+    pub(crate) fn get_record(&self) -> (usize, Duration, usize, Duration) {
+        (self.read_size, self.read_time, self.write_size, self.write_time)
+    }
+}
+
+static mut METRIC_RECORD: MetricRecoder = MetricRecoder::new();
 
 /// start db record
 pub fn start_db_record() {
     unsafe {
-        METRIC_RECORD = Some(MetricRecoder::default());
+        METRIC_RECORD.reset();
     }
 }
 
 /// add db read recorcd
 pub fn add_db_read_record(size: usize, time: Duration) {
     unsafe {
-        if METRIC_RECORD.is_none() {
-            return;
-        }
-
-        let record = METRIC_RECORD.as_mut().unwrap();
-        record.read_size = record.read_size.checked_add(size).expect("overflow");
-        record.read_time = record.read_time.checked_add(time).expect("overflow");
-       
+        METRIC_RECORD.add_read_record(size, time);
     }
 }
 
 /// add db write record
 pub fn add_db_write_record(size: usize, time: Duration) {
     unsafe {
-        if METRIC_RECORD.is_none() {
-            return;
-        }
-
-        let record = METRIC_RECORD.as_mut().unwrap();
-        record.write_size = record.write_size.checked_add(size).expect("overflow");
-        record.write_time = record.write_time.checked_add(time).expect("overflow");
-       
+        METRIC_RECORD.add_write_record(size, time);
     }
 }
 
 /// get db record
 pub fn get_db_record() -> (usize, Duration, usize, Duration) {
     unsafe {
-        if METRIC_RECORD.is_none() {
-            return (0, Duration::default(), 0, Duration::default())
-        }
-
-        let record = METRIC_RECORD.as_ref().unwrap();
-        (record.read_size, record.read_time, record.write_size, record.write_time)
+        METRIC_RECORD.get_record()
     }
 }
 

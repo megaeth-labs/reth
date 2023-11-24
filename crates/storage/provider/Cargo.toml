@@ -53,6 +53,5 @@ test-utils = ["reth-rlp"]
 enable_opcode_metrics = ["revm-utils"]
 enable_cache_record = ["revm-utils"]
 enable_db_speed_record = [
-    "reth-primitives/enable_db_speed_record",
     "reth-db/enable_db_speed_record",
 ]

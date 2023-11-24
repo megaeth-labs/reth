@@ -199,7 +199,7 @@ impl Default for DbSpeedRecord {
             read_header_td_db_size: 0,
             read_block_with_senders_db_time: Duration::default(),
             read_block_with_senders_db_size: 0,
-            write_to_db_time:  Duration::default(),
+            write_to_db_time: Duration::default(),
             write_to_db_size: 0,
         }
     }
@@ -231,25 +231,25 @@ impl DbSpeedRecord {
 
     /// add
     pub fn add(&mut self, other: Self) {
-        self.read_header_td_db_time = 
-            self.read_header_td_db_time
-                .checked_add(other.read_header_td_db_time)
-                .expect("overflow");
+        self.read_header_td_db_time = self
+            .read_header_td_db_time
+            .checked_add(other.read_header_td_db_time)
+            .expect("overflow");
         self.read_header_td_db_size = self
             .read_header_td_db_size
             .checked_add(other.read_header_td_db_size)
             .expect("overflow");
 
-        self.read_block_with_senders_db_time = 
-            self.read_block_with_senders_db_time
-                .checked_add(other.read_block_with_senders_db_time)
-                .expect("overflow");
+        self.read_block_with_senders_db_time = self
+            .read_block_with_senders_db_time
+            .checked_add(other.read_block_with_senders_db_time)
+            .expect("overflow");
         self.read_block_with_senders_db_size = self
             .read_block_with_senders_db_size
             .checked_add(other.read_block_with_senders_db_size)
             .expect("overflow");
 
-        self.write_to_db_time = 
+        self.write_to_db_time =
             self.write_to_db_time.checked_add(other.write_to_db_time).expect("overflow");
         self.write_to_db_size =
             self.write_to_db_size.checked_add(other.write_to_db_size).expect("overflow");
