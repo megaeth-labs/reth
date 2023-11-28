@@ -373,30 +373,32 @@ impl CacheDBRecordDisplayer {
     }
 
     fn misses_in_basic_pencentage(&self) -> f64 {
-        self.cache_db_record.misses.basic as f64 / self.cache_db_record.total_in_basic() as f64
+        self.cache_db_record.misses.basic as f64 * 100.0 /
+            self.cache_db_record.total_in_basic() as f64
     }
 
     fn misses_in_code_by_hash_pencentage(&self) -> f64 {
-        self.cache_db_record.misses.code_by_hash as f64 /
+        self.cache_db_record.misses.code_by_hash as f64 * 100.0 /
             self.cache_db_record.total_in_code_by_hash() as f64
     }
 
     fn misses_in_storage_pencentage(&self) -> f64 {
-        self.cache_db_record.misses.storage as f64 / self.cache_db_record.total_in_storage() as f64
+        self.cache_db_record.misses.storage as f64 * 100.0 /
+            self.cache_db_record.total_in_storage() as f64
     }
 
     fn misses_in_block_hash_pencentage(&self) -> f64 {
-        self.cache_db_record.misses.block_hash as f64 /
+        self.cache_db_record.misses.block_hash as f64 * 100.0 /
             self.cache_db_record.total_in_block_hash() as f64
     }
 
     fn total_misses_pencentage(&self) -> f64 {
-        self.cache_db_record.total_miss() as f64 /
+        self.cache_db_record.total_miss() as f64 * 100.0 /
             (self.cache_db_record.total_hits() + self.cache_db_record.total_miss()) as f64
     }
 
     fn misses_in_load_account_pencentage(&self) -> f64 {
-        self.cache_db_record.misses.load_account as f64 /
+        self.cache_db_record.misses.load_account as f64 * 100.0 /
             self.cache_db_record.total_in_load_account() as f64
     }
 
