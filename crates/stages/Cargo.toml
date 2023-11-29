@@ -74,6 +74,7 @@ serde_json.workspace = true
 
 [features]
 test-utils = ["reth-interfaces/test-utils"]
+finish_after_execution_stage = []
 
 [[bench]]
 name = "criterion"
