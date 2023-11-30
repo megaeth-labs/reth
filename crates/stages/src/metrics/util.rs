@@ -83,11 +83,16 @@ impl ExecutionDurationRecord {
     }
     /// add
     pub fn add(&mut self, other: ExecutionDurationRecord) {
-        self.execute_inner_time = self.execute_inner_time.checked_add(other.execute_inner_time).expect("overflow");
-        self.fetching_block_time = self.fetching_block_time.checked_add(other.fetching_block_time).expect("overflow");
-        self.execution_time = self.execution_time.checked_add(other.execution_time).expect("overflow");
-        self.process_state_time = self.process_state_time.checked_add(other.process_state_time).expect("overflow");
-        self.write_to_db_time = self.write_to_db_time.checked_add(other.write_to_db_time).expect("overflow");
+        self.execute_inner_time =
+            self.execute_inner_time.checked_add(other.execute_inner_time).expect("overflow");
+        self.fetching_block_time =
+            self.fetching_block_time.checked_add(other.fetching_block_time).expect("overflow");
+        self.execution_time =
+            self.execution_time.checked_add(other.execution_time).expect("overflow");
+        self.process_state_time =
+            self.process_state_time.checked_add(other.process_state_time).expect("overflow");
+        self.write_to_db_time =
+            self.write_to_db_time.checked_add(other.write_to_db_time).expect("overflow");
     }
 
     fn execute_inner_time(&self) -> f64 {

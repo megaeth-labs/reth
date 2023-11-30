@@ -60,9 +60,7 @@ pub fn add_db_write_record(size: usize, time: Duration) {
 
 /// get db record
 pub fn get_db_record() -> (usize, Duration, usize, Duration) {
-    unsafe {
-        METRIC_RECORD.get_record()
-    }
+    unsafe { METRIC_RECORD.get_record() }
 }
 
 pub struct WriteRecord {
