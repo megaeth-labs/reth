@@ -6229,7 +6229,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "3.3.0"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d6af4df40fcaa9eb4721ddf980cb3da373b3200d"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d1ae2facd5aad8e3c5489fbddaf8299e0bc70a29"
 dependencies = [
  "auto_impl",
  "revm-interpreter",
@@ -6241,7 +6241,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "1.1.2"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d6af4df40fcaa9eb4721ddf980cb3da373b3200d"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d1ae2facd5aad8e3c5489fbddaf8299e0bc70a29"
 dependencies = [
  "derive_more",
  "enumn",
@@ -6253,7 +6253,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "2.0.3"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d6af4df40fcaa9eb4721ddf980cb3da373b3200d"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d1ae2facd5aad8e3c5489fbddaf8299e0bc70a29"
 dependencies = [
  "k256",
  "num",
@@ -6269,7 +6269,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "1.1.2"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d6af4df40fcaa9eb4721ddf980cb3da373b3200d"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d1ae2facd5aad8e3c5489fbddaf8299e0bc70a29"
 dependencies = [
  "arbitrary",
  "auto_impl",
@@ -6293,7 +6293,7 @@ dependencies = [
 [[package]]
 name = "revm-utils"
 version = "0.1.0"
-source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d6af4df40fcaa9eb4721ddf980cb3da373b3200d"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/debug/performance-dashboard#d1ae2facd5aad8e3c5489fbddaf8299e0bc70a29"
 dependencies = [
  "ctor 0.2.5",
  "serde",

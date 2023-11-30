@@ -469,11 +469,12 @@ impl CacheDBRecordDisplayer {
         }
         println!();
         println!();
-        let total_ns_count = self.cache_db_record.penalty.us_percentile[0];
-        println!("========================================Penalty percentile ===============================================");
+        println!("========================================Penalty percentile(0-4us) ===============================================");
         println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}", "time (ns)", "Count (%)"};
         for (i, v) in self.cache_db_record.penalty.ns_percentile.iter().enumerate() {
-            println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.6}", i+1, (*v * 100) as f64 / total_ns_count as f64};
+            println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.6}", i+1,
+                (*v * 100) as f64 / total_us_count as f64,
+            };
         }
     }
 }
