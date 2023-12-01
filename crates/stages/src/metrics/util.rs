@@ -1,7 +1,10 @@
-#[cfg(feature = "enable_execution_duration_record")]
-use minstant::Instant;
-#[cfg(any(feature = "enable_execution_duration_record", feature = "enable_db_speed_record"))]
+// #[cfg(feature = "enable_execution_duration_record")]
+// use minstant::Instant;
+#[cfg(feature = "enable_db_speed_record")]
 use std::time::Duration;
+
+#[cfg(feature = "enable_execution_duration_record")]
+use revm_utils::time_utils::{instant::Instant, *};
 
 #[cfg(feature = "enable_execution_duration_record")]
 pub(crate) const COL_WIDTH_MIDDLE: usize = 14;
@@ -13,73 +16,73 @@ pub(crate) const COL_WIDTH_BIG: usize = 18;
 #[derive(Debug, Clone, Copy)]
 pub struct ExecutionDurationRecord {
     /// execute inner time recorder
-    inner_recorder: Instant,
+    inner_start_time: Instant,
     /// time recorder
-    time_recorder: Instant,
+    start_time: Instant,
 
     /// total time of execute inner.
-    pub execute_inner_time: Duration,
+    pub execute_inner_time: u64,
     /// total time of get block td and block_with_senders.
-    pub fetching_block_time: Duration,
+    pub fetching_block_time: u64,
     /// total time of revm execute tx(execute_and_verify_receipt).
-    pub execution_time: Duration,
+    pub execution_time: u64,
     /// total time of process state(state.extend)
-    pub process_state_time: Duration,
+    pub process_state_time: u64,
     /// total time of write to db
-    pub write_to_db_time: Duration,
+    pub write_to_db_time: u64,
 }
 
 #[cfg(feature = "enable_execution_duration_record")]
 impl Default for ExecutionDurationRecord {
     fn default() -> Self {
         Self {
-            inner_recorder: Instant::now(),
-            time_recorder: Instant::now(),
-            execute_inner_time: Duration::default(),
-            fetching_block_time: Duration::default(),
-            execution_time: Duration::default(),
-            process_state_time: Duration::default(),
-            write_to_db_time: Duration::default(),
+            inner_start_time: Instant::default(),
+            start_time: Instant::default(),
+            execute_inner_time: 0,
+            fetching_block_time: 0,
+            execution_time: 0,
+            process_state_time: 0,
+            write_to_db_time: 0,
         }
     }
 }
 
 #[cfg(feature = "enable_execution_duration_record")]
 impl ExecutionDurationRecord {
-    const SECONDS_ONE_HOUR: f64 = 60.0 * 60.0;
+    const NSSECONDS_ONE_HOUR: f64 = 60.0 * 60.0 * 1000_000_000.0;
 
     /// start inner time recorder
     pub(crate) fn start_inner_time_recorder(&mut self) {
-        self.inner_recorder = Instant::now();
+        self.inner_start_time = Instant::now();
     }
     /// start time recorder
     pub(crate) fn start_time_recorder(&mut self) {
-        self.time_recorder = Instant::now();
+        self.start_time = Instant::now();
     }
     /// add time of execute_inner
     pub(crate) fn add_execute_inner_duration(&mut self) {
-        self.execute_inner_time =
-            self.execute_inner_time.checked_add(self.inner_recorder.elapsed()).expect("overflow");
+        let delta = Instant::now().checked_cycles_since(self.inner_start_time).expect("overflow");
+        self.execute_inner_time = self.execute_inner_time.checked_add(delta).expect("overflow");
     }
     /// add time of get block td and block_with_senders
     pub(crate) fn add_read_block_duration(&mut self) {
-        self.fetching_block_time =
-            self.fetching_block_time.checked_add(self.time_recorder.elapsed()).expect("overflow");
+        let delta = Instant::now().checked_cycles_since(self.start_time).expect("overflow");
+        self.fetching_block_time = self.fetching_block_time.checked_add(delta).expect("overflow");
     }
     /// add time of revm execute tx
     pub(crate) fn add_execute_tx_duration(&mut self) {
-        self.execution_time =
-            self.execution_time.checked_add(self.time_recorder.elapsed()).expect("overflow");
+        let delta = Instant::now().checked_cycles_since(self.start_time).expect("overflow");
+        self.execution_time = self.execution_time.checked_add(delta).expect("overflow");
     }
     /// add time of process state
     pub(crate) fn add_process_state_duration(&mut self) {
-        self.process_state_time =
-            self.process_state_time.checked_add(self.time_recorder.elapsed()).expect("overflow");
+        let delta = Instant::now().checked_cycles_since(self.start_time).expect("overflow");
+        self.process_state_time = self.process_state_time.checked_add(delta).expect("overflow");
     }
     /// add time of write to db
     pub(crate) fn add_write_to_db_duration(&mut self) {
-        self.write_to_db_time =
-            self.write_to_db_time.checked_add(self.time_recorder.elapsed()).expect("overflow");
+        let delta = Instant::now().checked_cycles_since(self.start_time).expect("overflow");
+        self.write_to_db_time = self.write_to_db_time.checked_add(delta).expect("overflow");
     }
     /// add
     pub fn add(&mut self, other: ExecutionDurationRecord) {
@@ -96,11 +99,11 @@ impl ExecutionDurationRecord {
     }
 
     fn execute_inner_time(&self) -> f64 {
-        self.execute_inner_time.as_secs_f64() / Self::SECONDS_ONE_HOUR
+        convert_cycles_to_ns_f64(self.execute_inner_time) / Self::NSSECONDS_ONE_HOUR
     }
 
     fn fetching_block_time(&self) -> f64 {
-        self.fetching_block_time.as_secs_f64() / Self::SECONDS_ONE_HOUR
+        convert_cycles_to_ns_f64(self.fetching_block_time) / Self::NSSECONDS_ONE_HOUR
     }
 
     fn fetching_block_time_percent(&self) -> f64 {
@@ -108,7 +111,7 @@ impl ExecutionDurationRecord {
     }
 
     fn execution_time(&self) -> f64 {
-        self.execution_time.as_secs_f64() / Self::SECONDS_ONE_HOUR
+        convert_cycles_to_ns_f64(self.execution_time) / Self::NSSECONDS_ONE_HOUR
     }
 
     fn execution_time_percent(&self) -> f64 {
@@ -116,7 +119,7 @@ impl ExecutionDurationRecord {
     }
 
     fn process_state_time(&self) -> f64 {
-        self.process_state_time.as_secs_f64() / Self::SECONDS_ONE_HOUR
+        convert_cycles_to_ns_f64(self.process_state_time) / Self::NSSECONDS_ONE_HOUR
     }
 
     fn process_state_time_percent(&self) -> f64 {
@@ -124,7 +127,7 @@ impl ExecutionDurationRecord {
     }
 
     fn write_to_db_time(&self) -> f64 {
-        self.write_to_db_time.as_secs_f64() / Self::SECONDS_ONE_HOUR
+        convert_cycles_to_ns_f64(self.write_to_db_time) / Self::NSSECONDS_ONE_HOUR
     }
 
     fn write_to_db_time_percent(&self) -> f64 {
