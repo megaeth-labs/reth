@@ -25,6 +25,8 @@ revm-utils = { workspace = true, optional = true }
 # common
 tracing.workspace = true
 
+ctor = "0.2.5"
+
 [dev-dependencies]
 reth-rlp.workspace = true
 once_cell = "1.17.0"
@@ -41,3 +43,4 @@ enable_cache_record = [
     "reth-provider/enable_cache_record",
     "revm-utils",
 ]
+enable_execute_measure = ["revm-utils"]

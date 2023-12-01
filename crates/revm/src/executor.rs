@@ -247,6 +247,9 @@ where
 
         let mut cumulative_gas_used = 0;
         let mut post_state = PostState::with_tx_capacity(block.number, block.body.len());
+        #[cfg(feature = "enable_execute_measure")]
+        crate::utils::start_execute_tx_sub_recorder();
+
         for (transaction, sender) in block.body.iter().zip(senders) {
             // The sum of the transaction’s gas limit, Tg, and the gas utilised in this block prior,
             // must be no greater than the block’s gasLimit.
@@ -260,6 +263,8 @@ where
             }
             // Execute transaction.
             let ResultAndState { result, state } = self.transact(transaction, sender)?;
+            #[cfg(feature = "enable_execute_measure")]
+            crate::utils::transact_record();
 
             #[cfg(feature = "enable_opcode_metrics")]
             {
@@ -276,6 +281,8 @@ where
                 self.chain_spec.fork(Hardfork::SpuriousDragon).active_at_block(block.number),
                 &mut post_state,
             );
+            #[cfg(feature = "enable_execute_measure")]
+            crate::utils::commit_changes_record();
 
             // append gas used
             cumulative_gas_used += result.gas_used();
@@ -300,6 +307,8 @@ where
                     logs: result.into_logs().into_iter().map(into_reth_log).collect(),
                 },
             );
+            #[cfg(feature = "enable_execute_measure")]
+            crate::utils::add_receipt_record();
         }
 
         Ok((post_state, cumulative_gas_used))
@@ -349,6 +358,8 @@ where
             .into())
         }
 
+        #[cfg(feature = "enable_execute_measure")]
+        let _record = crate::utils::ApplyPostBlockChangesRecord::new();
         self.apply_post_block_changes(block, total_difficulty, post_state)
     }
 
@@ -358,6 +369,9 @@ where
         total_difficulty: U256,
         senders: Option<Vec<Address>>,
     ) -> Result<PostState, BlockExecutionError> {
+        #[cfg(feature = "enable_execute_measure")]
+        crate::utils::start_execute_tx_record();
+
         let post_state = self.execute(block, total_difficulty, senders)?;
 
         // TODO Before Byzantium, receipts contained state root that would mean that expensive
@@ -371,6 +385,8 @@ where
                 post_state.receipts(block.number).iter(),
             )?;
         }
+        #[cfg(feature = "enable_execute_measure")]
+        crate::utils::verify_receipt_record();
 
         Ok(post_state)
     }

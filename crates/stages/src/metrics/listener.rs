@@ -95,6 +95,12 @@ pub enum MetricEvent {
         /// cache db record.
         cache_db_record: CacheDbRecord,
     },
+    /// the time required to execute transaction subfunctions
+    #[cfg(feature = "enable_execute_measure")]
+    ExecuteTxsInfo {
+        /// execute txs record
+        execute_txs_record: reth_revm::utils::ExecuteTxsRecord,
+    },
 }
 
 /// Metrics routine that listens to new metric events on the `events_rx` receiver.
@@ -194,6 +200,12 @@ impl MetricsListener {
             #[cfg(feature = "enable_cache_record")]
             MetricEvent::CacheDbInfo { cache_db_record } => {
                 let _ = self.dashboard_events_tx.send(MetricEvent::CacheDbInfo { cache_db_record });
+            }
+            #[cfg(feature = "enable_execute_measure")]
+            MetricEvent::ExecuteTxsInfo { execute_txs_record } => {
+                let _ = self
+                    .dashboard_events_tx
+                    .send(MetricEvent::ExecuteTxsInfo { execute_txs_record });
             }
         }
     }

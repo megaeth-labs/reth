@@ -25,9 +25,13 @@ use reth_stages::DbSpeedRecord;
 
 #[cfg(feature = "enable_opcode_metrics")]
 const MGAS_TO_GAS: u64 = 1_000_000u64;
-#[cfg(any(feature = "enable_opcode_metrics", feature = "enable_cache_record"))]
+#[cfg(any(
+    feature = "enable_opcode_metrics",
+    feature = "enable_cache_record",
+    feature = "enable_execute_measure"
+))]
 const COL_WIDTH_MIDDLE: usize = 14;
-#[cfg(feature = "enable_cache_record")]
+#[cfg(any(feature = "enable_cache_record", feature = "enable_execute_measure"))]
 const COL_WIDTH_BIG: usize = 20;
 #[cfg(feature = "enable_cache_record")]
 const COL_WIDTH_LARGE: usize = 30;
@@ -531,4 +535,71 @@ impl Default for TpsAndGasRecordDisplayer {
     fn default() -> Self {
         Self { delta_txs: 0, delta_gas: 0, last_instant: Instant::now() }
     }
+}
+
+#[cfg(feature = "enable_execute_measure")]
+use reth_revm::utils::ExecuteTxsRecord;
+#[cfg(feature = "enable_execute_measure")]
+#[derive(Debug, Default)]
+pub(crate) struct ExecuteTxsDisplayer {
+    record: ExecuteTxsRecord,
+}
+
+#[cfg(feature = "enable_execute_measure")]
+impl ExecuteTxsDisplayer {
+    pub(crate) fn record(&mut self, record: ExecuteTxsRecord) {
+        self.record = record;
+    }
+
+    pub(crate) fn print(&self) {
+        let total = time_in_secs(self.record.total());
+        let transact = time_in_secs(self.record.transact());
+        let commit_changes = time_in_secs(self.record.commit_changes());
+        let add_receipt = time_in_secs(self.record.add_receipt());
+        let apply_post_block_changes = time_in_secs(self.record.apply_post_block_changes());
+        let verify_receipt = time_in_secs(self.record.verify_receipt());
+        let execute =
+            transact + commit_changes + add_receipt + apply_post_block_changes + verify_receipt;
+        let misc = total - execute;
+
+        let transact_pct = transact as f64 / total as f64;
+        let commit_changes_pct = commit_changes as f64 / total as f64;
+        let add_receipt_pct = add_receipt as f64 / total as f64;
+        let apply_post_block_changes_pct = apply_post_block_changes as f64 / total as f64;
+        let verify_receipt_pct = verify_receipt as f64 / total as f64;
+        let misc_pct = misc as f64 / total as f64;
+
+        println!();
+        println!("===============================Metric of execute txs ====================================================");
+        println!(
+            "{: <COL_WIDTH_BIG$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
+            "Cat.", "Time (s)", "Time (%)",
+        );
+
+        self.print_line("total", total, 100.0);
+        self.print_line("misc", misc, misc_pct);
+        self.print_line("transact", transact, transact_pct);
+        self.print_line("commit_changes", commit_changes, commit_changes_pct);
+        self.print_line("add_receipt", add_receipt, add_receipt_pct);
+        self.print_line(
+            "apply_block_changes",
+            apply_post_block_changes,
+            apply_post_block_changes_pct,
+        );
+        self.print_line("verify_receipt", verify_receipt, verify_receipt_pct);
+
+        println!();
+    }
+
+    fn print_line(&self, cat: &str, time: f64, percent: f64) {
+        println!(
+            "{: <COL_WIDTH_BIG$}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}",
+            cat, time, percent,
+        );
+    }
+}
+
+#[cfg(feature = "enable_execute_measure")]
+fn time_in_secs(cycles: u64) -> f64 {
+    revm_utils::time_utils::convert_cycles_to_duration(cycles).as_secs_f64()
 }
