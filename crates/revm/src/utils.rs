@@ -1,4 +1,4 @@
-use revm_utils::time_utils::instant::Instant;
+use revm_utils::time_utils::{convert_cycles_to_ns_f64, instant::Instant};
 
 /// ExecuteTxsRecord
 #[derive(Debug, Clone, Copy, Default)]
@@ -95,6 +95,19 @@ impl ExecuteTxsRecord {
     /// Return verify_receipt.
     pub fn verify_receipt(&self) -> u64 {
         self.verify_receipt
+    }
+    /// TODO: This function needs to be deleted later on.
+    pub fn print(&self) {
+        self.printline("total", self.total);
+        self.printline("transact", self.transact);
+        self.printline("commit_changes", self.commit_changes);
+        self.printline("add receipt", self.add_receipt);
+        self.printline("apply_post_block_changes", self.apply_post_block_changes);
+        self.printline("verify_receipt", self.verify_receipt);
+    }
+
+    fn printline(&self, cat: &'static str, cycles: u64) {
+        println!("{:?}: {:?} ns", cat, convert_cycles_to_ns_f64(cycles));
     }
 }
 

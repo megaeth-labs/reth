@@ -277,6 +277,7 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             if let Some(metrics_tx) = &mut self.metrics_tx {
                 let _ = metrics_tx.send(MetricEvent::ExecuteTxsInfo { execute_txs_record: record });
             }
+            record.print();
         }
 
         // Write remaining changes
