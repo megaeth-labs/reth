@@ -316,6 +316,7 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                     execute_duration_record: duration_record,
                 });
             }
+            duration_record.print();
         }
 
         let done = stage_progress == max_block;
