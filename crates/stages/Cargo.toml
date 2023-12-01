@@ -50,6 +50,7 @@ num-traits = "0.2.15"
 serde_json.workspace = true
 # revm-utils = { git = "https://github.com/megaeth-labs/revm", branch = "andy/debug/performance-dashboard" }
 revm-utils = { workspace = true, optional = true }
+reth-revm = { path = "../revm", optional = true }
 
 minstant = { version = "0.1.3", optional = true }
 
@@ -88,6 +89,7 @@ enable_execution_duration_record = ["revm-utils"]
 enable_tps_gas_record = []
 enable_test_max_th = []
 enable_db_speed_record =["reth-provider/enable_db_speed_record"]
+enable_execute_measure = ["reth-revm/enable_execute_measure"]
 
 [[bench]]
 name = "criterion"

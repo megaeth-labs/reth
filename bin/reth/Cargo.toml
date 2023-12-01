@@ -172,6 +172,12 @@ enable_db_speed_record = [
     "reth-stages/enable_db_speed_record",
     "open_performance_dashboard",
 ]
+enable_execute_measure = [
+    "reth-revm/enable_execute_measure",
+    "reth-stages/enable_execute_measure",
+    "revm-utils",
+    "open_performance_dashboard",
+]
 
 [build-dependencies]
 vergen = { version = "8.0.0", features = ["build", "cargo", "git", "gitcl"] }

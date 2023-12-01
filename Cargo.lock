@@ -5895,6 +5895,7 @@ dependencies = [
 name = "reth-revm"
 version = "0.1.0-alpha.8"
 dependencies = [
+ "ctor 0.2.5",
  "once_cell",
  "reth-consensus-common",
  "reth-interfaces",

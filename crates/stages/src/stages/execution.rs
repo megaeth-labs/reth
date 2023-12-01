@@ -271,6 +271,13 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                 let _ = metrics_tx.send(MetricEvent::RevmMetricTime { revm_metric_record: record });
             }
         }
+        #[cfg(feature = "enable_execute_measure")]
+        {
+            let record = reth_revm::utils::get_execute_tx_record();
+            if let Some(metrics_tx) = &mut self.metrics_tx {
+                let _ = metrics_tx.send(MetricEvent::ExecuteTxsInfo { execute_txs_record: record });
+            }
+        }
 
         // Write remaining changes
         trace!(target: "sync::stages::execution", accounts = state.accounts().len(), "Writing updated state to database");

@@ -24,6 +24,9 @@ use super::dashboard_display::CacheDBRecordDisplayer;
 #[cfg(feature = "enable_tps_gas_record")]
 use super::dashboard_display::TpsAndGasRecordDisplayer;
 
+#[cfg(feature = "enable_execute_measure")]
+use super::dashboard_display::ExecuteTxsDisplayer;
+
 #[derive(Debug)]
 pub(crate) struct DashboardListener {
     events_rx: UnboundedReceiver<MetricEvent>,
@@ -42,6 +45,8 @@ pub(crate) struct DashboardListener {
 
     #[cfg(feature = "enable_tps_gas_record")]
     tps_gas_displayer: TpsAndGasRecordDisplayer,
+    #[cfg(feature = "enable_execute_measure")]
+    execute_txs_displayer: ExecuteTxsDisplayer,
 }
 
 impl DashboardListener {
@@ -64,6 +69,8 @@ impl DashboardListener {
 
             #[cfg(feature = "enable_tps_gas_record")]
             tps_gas_displayer: TpsAndGasRecordDisplayer::default(),
+            #[cfg(feature = "enable_execute_measure")]
+            execute_txs_displayer: ExecuteTxsDisplayer::default(),
         }
     }
 
@@ -109,6 +116,11 @@ impl DashboardListener {
             MetricEvent::CacheDbInfo { cache_db_record } => {
                 self.cache_db_displayer.update_cache_db_record(cache_db_record);
                 self.cache_db_displayer.print();
+            }
+            #[cfg(feature = "enable_execute_measure")]
+            MetricEvent::ExecuteTxsInfo { execute_txs_record } => {
+                self.execute_txs_displayer.record(execute_txs_record);
+                self.execute_txs_displayer.print();
             }
         }
     }
