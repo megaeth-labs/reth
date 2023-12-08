@@ -45,3 +45,7 @@ assert_matches.workspace = true
 
 [features]
 test-utils = ["reth-rlp"]
+enable_cache_record = []
+enable_db_speed_record = [
+    "reth-db/enable_db_speed_record",
+]

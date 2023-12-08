@@ -81,6 +81,9 @@ use std::{
 use tokio::sync::{mpsc::unbounded_channel, oneshot, watch};
 use tracing::*;
 
+#[cfg(feature = "open_performance_dashboard")]
+use perf_metrics::dashboard::DashboardListener;
+
 pub mod cl_events;
 pub mod events;
 
@@ -261,6 +264,14 @@ impl<Ext: RethCliExt> NodeCommand<Ext> {
         };
 
         self.init_trusted_nodes(&mut config);
+
+        #[cfg(feature = "open_performance_dashboard")]
+        {
+            let (dashboard_tx, dashboard_rx) = unbounded_channel();
+            let dashboard_listener = DashboardListener::new(dashboard_rx);
+            ctx.task_executor.spawn_critical("dashboard listener task", dashboard_listener);
+            perf_metrics::set_metric_event_sender(dashboard_tx);
+        }
 
         debug!(target: "reth::cli", "Spawning metrics listener task");
         let (metrics_tx, metrics_rx) = unbounded_channel();
@@ -879,7 +890,6 @@ impl<Ext: RethCliExt> NodeCommand<Ext> {
                 )),
             )
             .build(db, self.chain.clone());
-
         Ok(pipeline)
     }
 

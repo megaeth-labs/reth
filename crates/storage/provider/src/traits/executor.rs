@@ -42,4 +42,10 @@ pub trait BlockExecutor<SP: StateProvider> {
         total_difficulty: U256,
         senders: Option<Vec<Address>>,
     ) -> Result<PostState, BlockExecutionError>;
+
+    /// Get CacheDb metric size.
+    #[cfg(feature = "enable_cache_record")]
+    fn get_cachedb_size(&self) -> usize {
+        0
+    }
 }

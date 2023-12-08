@@ -49,6 +49,7 @@ members = [
     "examples",
     "examples/additional-rpc-namespace-in-cli",
     "examples/rpc-db",
+    "crates/perf-metrics",
 ]
 default-members = ["bin/reth"]
 
@@ -79,13 +80,16 @@ codegen-units = 1
 incremental = false
 
 [patch.crates-io]
-revm = { git = "https://github.com/bluealloy/revm/", branch = "release/v25" }
-revm-primitives = { git = "https://github.com/bluealloy/revm/", branch = "release/v25" }
+# revm = { git = "https://github.com/bluealloy/revm/", branch = "release/v25" }
+# revm-primitives = { git = "https://github.com/bluealloy/revm/", branch = "release/v25" }
+revm = { git = "https://github.com/megaeth-labs/revm", branch = "andy/dev/perf-for-v25" }
+revm-primitives = { git = "https://github.com/megaeth-labs/revm", branch = "andy/dev/perf-for-v25" }
 
 [workspace.dependencies]
 ## reth
 revm = { version = "3" }
 revm-primitives = "1.1"
+revm-interpreter = "1.1.2"
 reth = { path = "./bin/reth" }
 reth-primitives = { path = "./crates/primitives" }
 reth-interfaces = { path = "./crates/interfaces" }
@@ -162,3 +166,7 @@ toml = "0.7"
 proptest = "1.0"
 arbitrary = "1.1"
 assert_matches = "1.5.0"
+
+## support perf test
+perf-metrics = { path = "./crates/perf-metrics"}
+revm-utils = { git = "https://github.com/megaeth-labs/revm", branch = "andy/dev/perf-for-v25"}

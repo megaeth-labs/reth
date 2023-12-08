@@ -114,6 +114,9 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             return Ok(ExecOutput::done(input.checkpoint()))
         }
 
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::start_record();
+
         let start_block = input.next_block();
         let max_block = input.target();
         let prune_modes = self.adjust_prune_modes(provider, start_block, max_block)?;
@@ -131,16 +134,27 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         let mut state = PostState::default();
         state.add_prune_modes(prune_modes);
 
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::record_before_loop();
+
         for block_number in start_block..=max_block {
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_before_td();
             let td = provider
                 .header_td_by_number(block_number)?
                 .ok_or_else(|| ProviderError::HeaderNotFound(block_number.into()))?;
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_after_td();
+
             let block = provider
                 .block_with_senders(block_number)?
                 .ok_or_else(|| ProviderError::BlockNotFound(block_number.into()))?;
 
             // Configure the executor to use the current state.
             trace!(target: "sync::stages::execution", number = block_number, txs = block.body.len(), "Executing block");
+
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_after_block_with_senders();
 
             // Execute the block
             let (block, senders) = block.into_components();
@@ -150,29 +164,67 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                     block: block.header.clone().seal_slow(),
                     error,
                 })?;
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_after_execute();
 
-            // Gas metrics
+            // Gas and txs metrics
             if let Some(metrics_tx) = &mut self.metrics_tx {
                 let _ =
                     metrics_tx.send(MetricEvent::ExecutionStageGas { gas: block.header.gas_used });
             }
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_after_get_tps(
+                block_number,
+                block.body.len() as u64,
+                block.header.gas_used,
+            );
 
             // Merge state changes
             state.extend(block_state);
             stage_progress = block_number;
             stage_checkpoint.progress.processed += block.gas_used;
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_after_process_state();
+
+            #[cfg(all(feature = "enable_test_max_th", feature = "enable_cache_record"))]
+            {
+                // TODO: Need modify later.
+                if block_number == 500_000 {
+                    let cachedb_size = executor.get_cachedb_size();
+                    println!(
+                    "block_number: {:?}, start_block: {:?}, state.size_hint: {:?}, cache_size: {:?}",
+                    block_number,
+                    start_block,
+                    state.size_hint(),
+                    cachedb_size,
+                );
+                }
+            }
 
             // Check if we should commit now
             if self.thresholds.is_end_of_batch(block_number - start_block, state.size_hint() as u64)
             {
+                info!(target: "sync::stages::execution", number = block_number, "Execution batch end");
                 break
             }
         }
-
         // Write remaining changes
         trace!(target: "sync::stages::execution", accounts = state.accounts().len(), "Writing updated state to database");
         let start = Instant::now();
+
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::record_after_loop();
+
         state.write_to_db(provider.tx_ref(), max_block)?;
+
+        #[cfg(feature = "open_performance_dashboard")]
+        {
+            #[cfg(feature = "enable_cache_record")]
+            let cachedb_size = executor.get_cachedb_size();
+            #[cfg(not(feature = "enable_cache_record"))]
+            let cachedb_size = 0;
+            perf_metrics::record_at_end(cachedb_size);
+        }
         trace!(target: "sync::stages::execution", took = ?start.elapsed(), "Wrote state");
 
         let done = stage_progress == max_block;
