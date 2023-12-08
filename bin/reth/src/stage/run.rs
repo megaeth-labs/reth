@@ -25,6 +25,9 @@ use reth_stages::{
 use std::{any::Any, net::SocketAddr, path::PathBuf, sync::Arc};
 use tracing::*;
 
+#[cfg(feature = "open_performance_dashboard")]
+use perf_metrics::dashboard::DashboardListener;
+
 /// `reth stage` command
 #[derive(Debug, Parser)]
 pub struct Command {
@@ -225,6 +228,7 @@ impl Command {
                 StageEnum::StorageHistory => (Box::<IndexStorageHistoryStage>::default(), None),
                 _ => return Ok(()),
             };
+
         if let Some(unwind_stage) = &unwind_stage {
             assert!(exec_stage.type_id() == unwind_stage.type_id());
         }
@@ -270,7 +274,23 @@ impl Command {
         if self.commit {
             provider_rw.commit()?;
         }
+        info!(target: "reth::cli", "reth {} end stage {:?}", SHORT_VERSION, self.stage);
 
         Ok(())
+    }
+
+    #[cfg(feature = "open_performance_dashboard")]
+    fn set_dashboard(&self, _ctx: crate::runner::CliContext) {
+        use tokio::sync::mpsc::unbounded_channel;
+        let (dashboard_tx, dashboard_rx) = unbounded_channel();
+        let dashboard_listener = DashboardListener::new(dashboard_rx);
+        _ctx.task_executor.spawn_critical("dashboard listener task", dashboard_listener);
+        perf_metrics::set_metric_event_sender(dashboard_tx);
+    }
+
+    #[cfg(feature = "open_performance_dashboard")]
+    pub async fn execute_with_dashboard(self, _ctx: crate::runner::CliContext) -> eyre::Result<()> {
+        self.set_dashboard(_ctx);
+        self.execute().await
     }
 }

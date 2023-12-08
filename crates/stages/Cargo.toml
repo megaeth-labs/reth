@@ -50,7 +50,6 @@ num-traits = "0.2.15"
 # metric
 perf-metrics.workspace = true
 
-
 [dev-dependencies]
 # reth
 reth-primitives = { workspace = true, features = ["arbitrary"] }

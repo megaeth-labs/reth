@@ -82,7 +82,6 @@ incremental = false
 [patch.crates-io]
 # revm = { git = "https://github.com/bluealloy/revm/", branch = "release/v25" }
 # revm-primitives = { git = "https://github.com/bluealloy/revm/", branch = "release/v25" }
-
 revm = { git = "https://github.com/megaeth-labs/revm", branch = "andy/dev/perf-for-v25" }
 revm-primitives = { git = "https://github.com/megaeth-labs/revm", branch = "andy/dev/perf-for-v25" }
 
