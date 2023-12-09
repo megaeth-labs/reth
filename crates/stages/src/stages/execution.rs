@@ -117,6 +117,9 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             return Ok(ExecOutput::done(input.checkpoint()))
         }
 
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::start_record();
+
         let start_block = input.next_block();
         let max_block = input.target();
         let prune_modes = self.adjust_prune_modes(provider, start_block, max_block)?;
@@ -140,13 +143,19 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         let mut cumulative_gas = 0;
         let batch_start = Instant::now();
 
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::record_before_loop();
+
         for block_number in start_block..=max_block {
             // Fetch the block
             let fetch_block_start = Instant::now();
-
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_before_td(block_number);
             let td = provider
                 .header_td_by_number(block_number)?
                 .ok_or_else(|| ProviderError::HeaderNotFound(block_number.into()))?;
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_after_td();
 
             // we need the block's transactions but we don't need the transaction hashes
             let block = provider
@@ -160,6 +169,8 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             // Configure the executor to use the current state.
             trace!(target: "sync::stages::execution", number = block_number, txs = block.body.len(), "Executing block");
 
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_after_block_with_senders();
             // Execute the block
             let execute_start = Instant::now();
             executor.execute_and_verify_receipt(&block, td).map_err(|error| StageError::Block {
@@ -168,11 +179,17 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             })?;
             execution_duration += execute_start.elapsed();
 
-            // Gas metrics
+            // Gas and txs metrics
             if let Some(metrics_tx) = &mut self.metrics_tx {
                 let _ =
                     metrics_tx.send(MetricEvent::ExecutionStageGas { gas: block.header.gas_used });
             }
+            #[cfg(feature = "open_performance_dashboard")]
+            perf_metrics::record_after_get_tps(
+                block_number,
+                block.body.len() as u64,
+                block.header.gas_used,
+            );
 
             stage_progress = block_number;
 
@@ -186,16 +203,26 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                 cumulative_gas,
                 batch_start.elapsed(),
             ) {
+                info!(target: "sync::stages::execution", number = block_number, "Execution batch end");
                 break
             }
         }
         let time = Instant::now();
         let state = executor.take_output_state();
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::record_after_take_output_state();
+
         let write_preparation_duration = time.elapsed();
 
         let time = Instant::now();
         // write output
         state.write_to_db(provider.tx_ref(), OriginalValuesKnown::Yes)?;
+
+        #[cfg(all(feature = "open_performance_dashboard", feature = "enable_cache_record"))]
+        perf_metrics::record_at_end(executor.get_state_size());
+        #[cfg(all(feature = "open_performance_dashboard", not(feature = "enable_cache_record")))]
+        perf_metrics::record_at_end(0);
+
         let db_write_duration = time.elapsed();
         debug!(
             target: "sync::stages::execution",

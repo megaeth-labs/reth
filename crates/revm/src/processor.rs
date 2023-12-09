@@ -313,7 +313,11 @@ where
             .into())
         }
         let time = Instant::now();
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::start_execute_tx_sub_record();
         self.apply_post_execution_state_change(block, total_difficulty)?;
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::apply_post_execution_state_change_record();
         self.stats.apply_post_execution_state_changes_duration += time.elapsed();
 
         let time = Instant::now();
@@ -332,6 +336,8 @@ where
             BundleRetention::PlainState
         };
         self.db_mut().merge_transitions(retention);
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::merge_transactions_record();
         self.stats.merge_transitions_duration += time.elapsed();
 
         if self.first_block.is_none() {
@@ -425,6 +431,8 @@ where
         block: &BlockWithSenders,
         total_difficulty: U256,
     ) -> Result<(), BlockExecutionError> {
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::start_execute_tx_record();
         // execute block
         let receipts = self.execute_inner(block, total_difficulty)?;
 
@@ -443,6 +451,8 @@ where
             self.stats.receipt_root_duration += time.elapsed();
         }
 
+        #[cfg(feature = "enable_execution_duration_record")]
+        let _record = perf_metrics::VerifyAndSaveReceiptsRecord::new();
         self.save_receipts(receipts)
     }
 
@@ -460,6 +470,8 @@ where
 
         let mut cumulative_gas_used = 0;
         let mut receipts = Vec::with_capacity(block.body.len());
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::start_execute_tx_sub_record();
         for (sender, transaction) in block.transactions_with_sender() {
             let time = Instant::now();
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
@@ -474,6 +486,12 @@ where
             }
             // Execute transaction.
             let ResultAndState { result, state } = self.transact(transaction, *sender)?;
+            #[cfg(feature = "enable_execution_duration_record")]
+            perf_metrics::transact_record();
+
+            #[cfg(feature = "enable_opcode_metrics")]
+            perf_metrics::record_opcode();
+
             trace!(
                 target: "evm",
                 ?transaction, ?result, ?state,
@@ -483,6 +501,8 @@ where
             let time = Instant::now();
 
             self.db_mut().commit(state);
+            #[cfg(feature = "enable_execution_duration_record")]
+            perf_metrics::commit_changes_record();
 
             self.stats.apply_state_duration += time.elapsed();
 
@@ -499,6 +519,8 @@ where
                 // convert to reth log
                 logs: result.into_logs().into_iter().map(Into::into).collect(),
             });
+            #[cfg(feature = "enable_execution_duration_record")]
+            perf_metrics::add_receipt_record();
         }
 
         Ok((receipts, cumulative_gas_used))
@@ -519,6 +541,12 @@ where
 
     fn size_hint(&self) -> Option<usize> {
         Some(self.evm.context.evm.db.bundle_size_hint())
+    }
+
+    /// Get state size.
+    #[cfg(feature = "enable_cache_record")]
+    fn get_state_size(&self) -> usize {
+        self.evm.context.evm.db.mem_usage()
     }
 }
 

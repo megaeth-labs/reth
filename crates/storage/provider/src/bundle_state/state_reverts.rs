@@ -31,6 +31,9 @@ impl StateReverts {
     ) -> Result<(), DatabaseError> {
         // Write storage changes
         tracing::trace!(target: "provider::reverts", "Writing storage changes");
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::start_write_to_db_sub_record();
+
         let mut storages_cursor = tx.cursor_dup_write::<tables::PlainStorageState>()?;
         let mut storage_changeset_cursor = tx.cursor_dup_write::<tables::StorageChangeSet>()?;
         for (block_index, mut storage_changes) in self.0.storage.into_iter().enumerate() {
@@ -66,10 +69,15 @@ impl StateReverts {
 
                 tracing::trace!(target: "provider::reverts", ?address, ?storage, "Writing storage reverts");
                 for (key, value) in StorageRevertsIter::new(storage, wiped_storage) {
+                    #[cfg(feature = "enable_execution_duration_record")]
+                    // sizeof(B256) + sizeof(StorageEntry) = 96
+                    let _record = perf_metrics::RevertsStorageWrite::new(96usize);
                     storage_changeset_cursor.append_dup(storage_id, StorageEntry { key, value })?;
                 }
             }
         }
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::record_revert_storage_time();
 
         // Write account changes
         tracing::trace!(target: "provider::reverts", "Writing account changes");
@@ -79,12 +87,17 @@ impl StateReverts {
             // Sort accounts by address.
             account_block_reverts.par_sort_by_key(|a| a.0);
             for (address, info) in account_block_reverts {
+                #[cfg(feature = "enable_execution_duration_record")]
+                // sizeof(Address) + sizeof(AccountBeforeTx) = 124
+                let _record = perf_metrics::RevertsAccountWrite::new(124usize);
                 account_changeset_cursor.append_dup(
                     block_number,
                     AccountBeforeTx { address, info: info.map(into_reth_acc) },
                 )?;
             }
         }
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::record_revert_account_time();
 
         Ok(())
     }

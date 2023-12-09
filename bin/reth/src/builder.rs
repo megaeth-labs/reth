@@ -46,6 +46,9 @@ use std::{path::PathBuf, sync::Arc};
 use tokio::sync::{mpsc::unbounded_channel, oneshot};
 use tracing::*;
 
+#[cfg(feature = "open_performance_dashboard")]
+use perf_metrics::dashboard::DashboardListener;
+
 /// Re-export `NodeConfig` from `reth_node_core`.
 pub use reth_node_core::node_config::NodeConfig;
 
@@ -145,6 +148,14 @@ impl<DB: Database + DatabaseMetrics + DatabaseMetadata + 'static> NodeBuilderWit
         let genesis_hash = init_genesis(Arc::clone(&self.db), self.config.chain.clone())?;
 
         info!(target: "reth::cli", "{}", DisplayHardforks::new(self.config.chain.hardforks()));
+
+        #[cfg(feature = "open_performance_dashboard")]
+        {
+            let (dashboard_tx, dashboard_rx) = unbounded_channel();
+            let dashboard_listener = DashboardListener::new(dashboard_rx);
+            executor.spawn_critical("dashboard listener task", dashboard_listener);
+            perf_metrics::set_metric_event_sender(dashboard_tx);
+        }
 
         let consensus = self.config.consensus();
 
