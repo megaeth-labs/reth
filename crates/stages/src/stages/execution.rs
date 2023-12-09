@@ -146,6 +146,9 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         #[cfg(feature = "open_performance_dashboard")]
         perf_metrics::record_before_loop();
 
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::record_before_loop();
+
         for block_number in start_block..=max_block {
             // Fetch the block
             let fetch_block_start = Instant::now();
@@ -234,6 +237,8 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         let write_preparation_duration = time.elapsed();
 
         let time = Instant::now();
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::record_after_loop();
         // write output
         state.write_to_db(provider.tx_ref(), OriginalValuesKnown::Yes)?;
         #[cfg(feature = "open_performance_dashboard")]
