@@ -55,6 +55,9 @@ rayon.workspace = true
 num-traits = "0.2.15"
 auto_impl = "1"
 
+# metric
+perf-metrics.workspace = true
+
 [dev-dependencies]
 # reth
 reth-primitives = { workspace = true, features = ["test-utils", "arbitrary"] }
@@ -82,8 +85,40 @@ criterion = { workspace = true, features = ["async_futures"] }
 # io
 serde_json.workspace = true
 
+
 [features]
 test-utils = ["reth-interfaces/test-utils", "reth-db/test-utils"]
+open_performance_dashboard = []
+enable_opcode_metrics = [
+    "perf-metrics/enable_opcode_metrics",   
+    "reth-revm/enable_opcode_metrics",
+    "open_performance_dashboard",
+    ]
+enable_cache_record = [
+    "perf-metrics/enable_cache_record", 
+    "reth-revm/enable_cache_record",
+    "open_performance_dashboard",
+    ]
+finish_after_execution_stage = []
+enable_execution_duration_record = [
+    "perf-metrics/enable_execution_duration_record",  
+    "open_performance_dashboard",
+    ]
+enable_tps_gas_record = [
+    "perf-metrics/enable_tps_gas_record",  
+    "open_performance_dashboard",
+    ]
+enable_test_max_th = []
+enable_db_speed_record =[
+    "reth-provider/enable_db_speed_record", 
+    "perf-metrics/enable_db_speed_record",  
+    "open_performance_dashboard",
+    ]
+enable_execute_measure = [
+    "perf-metrics/enable_execute_measure", 
+    "reth-revm/enable_execute_measure",
+    "open_performance_dashboard",
+    ]
 
 [[bench]]
 name = "criterion"
