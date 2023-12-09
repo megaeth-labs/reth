@@ -23,6 +23,9 @@ reth-node-api.workspace = true
 revm.workspace = true
 revm-inspectors.workspace = true
 
+# metric
+perf-metrics = { workspace = true, optional = true }
+
 # common
 tracing.workspace = true
 
@@ -38,3 +41,15 @@ optimism = [
     "reth-interfaces/optimism",
 ]
 js-tracer = ["revm-inspectors/js-tracer"]
+enable_opcode_metrics = [
+    "revm/enable_opcode_metrics",
+    "perf-metrics/enable_opcode_metrics",
+    ]
+enable_cache_record = [
+    "revm/enable_cache_record",
+    "reth-provider/enable_cache_record",
+]
+enable_execution_duration_record = [
+    "perf-metrics/enable_execution_duration_record",
+    "revm/enable_transact_measure",
+]

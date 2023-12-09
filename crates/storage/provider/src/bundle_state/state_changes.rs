@@ -26,6 +26,8 @@ impl StateChanges {
         self.0.accounts.par_sort_by_key(|a| a.0);
         self.0.storage.par_sort_by_key(|a| a.address);
         self.0.contracts.par_sort_by_key(|a| a.0);
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::record_sort_time();
 
         // Write new account state
         tracing::trace!(target: "provider::bundle_state", len = self.0.accounts.len(), "Writing new account state");
@@ -34,19 +36,30 @@ impl StateChanges {
         for (address, account) in self.0.accounts.into_iter() {
             if let Some(account) = account {
                 tracing::trace!(target: "provider::bundle_state", ?address, "Updating plain state account");
+                #[cfg(feature = "enable_execution_duration_record")]
+                // sizeof(Address) + sizeof(Account) = 100
+                let _record = perf_metrics::StateAccountWrite::new(100usize);
                 accounts_cursor.upsert(address, into_reth_acc(account))?;
             } else if accounts_cursor.seek_exact(address)?.is_some() {
                 tracing::trace!(target: "provider::bundle_state", ?address, "Deleting plain state account");
                 accounts_cursor.delete_current()?;
             }
         }
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::record_state_account_time();
 
         // Write bytecode
         tracing::trace!(target: "provider::bundle_state", len = self.0.contracts.len(), "Writing bytecodes");
         let mut bytecodes_cursor = tx.cursor_write::<tables::Bytecodes>()?;
         for (hash, bytecode) in self.0.contracts.into_iter() {
+            #[cfg(feature = "enable_execution_duration_record")]
+            // size_of_val(hash) + size_of::<Bytecode>() = 88
+            let _record =
+                perf_metrics::StateBytecodeWrite::new(88usize + bytecode.bytecode.0.len());
             bytecodes_cursor.upsert(hash, Bytecode(bytecode))?;
         }
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::record_state_bytecode_time();
 
         // Write new storage state and wipe storage if needed.
         tracing::trace!(target: "provider::bundle_state", len = self.0.storage.len(), "Writing new storage state");
@@ -73,10 +86,15 @@ impl StateChanges {
                 }
 
                 if entry.value != U256::ZERO {
+                    #[cfg(feature = "enable_execution_duration_record")]
+                    // sizeof(Address) + sizeof(StorageEntry) = 84
+                    let _record = perf_metrics::StateStorageWrite::new(84usize);
                     storages_cursor.upsert(address, entry)?;
                 }
             }
         }
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::record_state_storage_time();
         Ok(())
     }
 }

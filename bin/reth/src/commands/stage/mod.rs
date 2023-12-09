@@ -34,9 +34,20 @@ pub enum Subcommands {
 
 impl Command {
     /// Execute `stage` command
+    #[cfg(not(feature = "open_performance_dashboard"))]
     pub async fn execute(self) -> eyre::Result<()> {
         match self.command {
             Subcommands::Run(command) => command.execute().await,
+            Subcommands::Drop(command) => command.execute().await,
+            Subcommands::Dump(command) => command.execute().await,
+            Subcommands::Unwind(command) => command.execute().await,
+        }
+    }
+    /// Execute `stage` command
+    #[cfg(feature = "open_performance_dashboard")]
+    pub async fn execute(self, _ctx: crate::core::cli::runner::CliContext) -> eyre::Result<()> {
+        match self.command {
+            Subcommands::Run(command) => command.execute_with_dashboard(_ctx).await,
             Subcommands::Drop(command) => command.execute().await,
             Subcommands::Dump(command) => command.execute().await,
             Subcommands::Unwind(command) => command.execute().await,

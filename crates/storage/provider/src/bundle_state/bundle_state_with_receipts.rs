@@ -306,6 +306,8 @@ impl BundleStateWithReceipts {
     where
         TX: DbTxMut + DbTx,
     {
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::start_write_to_db_record();
         let (plain_state, reverts) = self.bundle.into_plain_state_and_reverts(is_value_known);
 
         StateReverts(reverts).write_to_db(tx, self.first_block)?;
@@ -333,11 +335,22 @@ impl BundleStateWithReceipts {
             } else if !receipts.is_empty() {
                 for (tx_idx, receipt) in receipts.into_iter().enumerate() {
                     if let Some(receipt) = receipt {
+                        #[cfg(feature = "enable_execution_duration_record")]
+                        let _record = perf_metrics::ReceiptsWrite::new(
+                            std::mem::size_of::<Receipt>() +
+                                receipt
+                                    .logs
+                                    .iter()
+                                    .map(|log| log.topics.len() * 32 + log.data.0.len())
+                                    .sum::<usize>(),
+                        );
                         receipts_cursor.append(first_tx_index + tx_idx as u64, receipt)?;
                     }
                 }
             }
         }
+        #[cfg(feature = "enable_execution_duration_record")]
+        perf_metrics::record_write_receipts_time();
 
         StateChanges(plain_state).write_to_db(tx)?;
 

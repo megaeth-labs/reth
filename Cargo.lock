@@ -1638,6 +1638,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "ctor"
+version = "0.1.26"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d2301688392eb071b0bf1a37be05c469d3cc4dbbd95df672fe28ab021e6a096"
+dependencies = [
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "ctor"
+version = "0.2.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad291aa74992b9b7a7e88c38acbbf6ad7e107f1d90ee8775b7bc1fc3394f485c"
+dependencies = [
+ "quote",
+ "syn 2.0.53",
+]
+
+[[package]]
 name = "ctr"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3888,7 +3908,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c2a198fb6b0eada2a8df47933734e6d35d350665a33a3593d7164fa52c75c19"
 dependencies = [
  "cfg-if",
- "windows-targets 0.52.4",
+ "windows-targets 0.48.5",
 ]
 
 [[package]]
@@ -4188,6 +4208,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d811f3e15f28568be3407c8e7fdb6514c1cda3cb30683f15b6a1a1dc4ea14a7"
 dependencies = [
  "adler",
+]
+
+[[package]]
+name = "minstant"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fb9b5c752f145ac5046bccc3c4f62892e3c950c1d1eab80c5949cd68a2078db"
+dependencies = [
+ "ctor 0.1.26",
+ "web-time",
 ]
 
 [[package]]
@@ -4661,6 +4691,17 @@ name = "percent-encoding"
 version = "2.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
+
+[[package]]
+name = "perf-metrics"
+version = "0.1.0"
+dependencies = [
+ "ctor 0.2.7",
+ "minstant",
+ "revm",
+ "revm-utils",
+ "tokio",
+]
 
 [[package]]
 name = "pest"
@@ -5433,6 +5474,7 @@ dependencies = [
  "jsonrpsee",
  "libc",
  "metrics-process",
+ "perf-metrics",
  "proptest",
  "rand 0.8.5",
  "ratatui",
@@ -5474,6 +5516,8 @@ dependencies = [
  "reth-tracing",
  "reth-transaction-pool",
  "reth-trie",
+ "revm",
+ "revm-utils",
  "serde",
  "serde_json",
  "similar-asserts",
@@ -6340,6 +6384,7 @@ dependencies = [
  "itertools 0.12.1",
  "metrics",
  "parking_lot 0.12.1",
+ "perf-metrics",
  "pin-project",
  "rand 0.8.5",
  "rayon",
@@ -6384,6 +6429,7 @@ dependencies = [
 name = "reth-revm"
 version = "0.2.0-beta.4"
 dependencies = [
+ "perf-metrics",
  "reth-consensus-common",
  "reth-interfaces",
  "reth-node-api",
@@ -6593,6 +6639,7 @@ dependencies = [
  "metrics",
  "num-traits",
  "paste",
+ "perf-metrics",
  "pprof",
  "rand 0.8.5",
  "rayon",
@@ -6771,14 +6818,15 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "7.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "24fd3ed4b62dc61c647552d8b781811ae25ec74d23309055077e4dfb392444d2"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34#4a33e08d835b5166672f773064e17b589602a25a"
 dependencies = [
  "auto_impl",
  "cfg-if",
  "dyn-clone",
+ "hashbrown 0.14.3",
  "revm-interpreter",
  "revm-precompile",
+ "revm-utils",
  "serde",
  "serde_json",
 ]
@@ -6786,7 +6834,7 @@ dependencies = [
 [[package]]
 name = "revm-inspectors"
 version = "0.1.0"
-source = "git+https://github.com/paradigmxyz/evm-inspectors?rev=b3082f3#b3082f3deca76e721ac72cee4a6857b4ff88e684"
+source = "git+https://github.com/megaeth-labs/evm-inspectors.git?rev=79170b6#79170b637e38e9272157f17a51a7cf731d4a5ec6"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-trace-types",
@@ -6804,18 +6852,17 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "3.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f0a1818f8c876b0d71a0714217c34da7df8a42c0462750768779d55680e4554"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34#4a33e08d835b5166672f773064e17b589602a25a"
 dependencies = [
  "revm-primitives",
+ "revm-utils",
  "serde",
 ]
 
 [[package]]
 name = "revm-precompile"
 version = "5.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a9645a70f1df1e5bd7fa8718b9ba486fac9c3f0467aa6b58e7f590d5f6fd0f7"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34#4a33e08d835b5166672f773064e17b589602a25a"
 dependencies = [
  "aurora-engine-modexp",
  "c-kzg",
@@ -6831,8 +6878,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "3.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "323ad597cf75ac9cb1d161be29fcc3562426f0278a1d04741697fca556e1ceea"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34#4a33e08d835b5166672f773064e17b589602a25a"
 dependencies = [
  "alloy-primitives",
  "auto_impl",
@@ -6846,7 +6892,20 @@ dependencies = [
  "hashbrown 0.14.3",
  "hex",
  "once_cell",
+ "revm-utils",
  "serde",
+]
+
+[[package]]
+name = "revm-utils"
+version = "0.1.0"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34#4a33e08d835b5166672f773064e17b589602a25a"
+dependencies = [
+ "allocator-api2",
+ "ctor 0.2.7",
+ "serde",
+ "serde_arrays",
+ "serde_json",
 ]
 
 [[package]]
@@ -7321,6 +7380,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3fb1c873e1b9b056a4dc4c0c198b24c3ffa059243875552b2bd0933b1aee4ce2"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde_arrays"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38636132857f68ec3d5f3eb121166d2af33cb55174c4d5ff645db6165cbef0fd"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
@@ -8931,6 +8999,16 @@ name = "web-sys"
 version = "0.3.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77afa9a11836342370f4817622a2f0f418b134426d91a82dfb48f532d2ec13ef"
+dependencies = [
+ "js-sys",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "web-time"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a6580f308b1fad9207618087a65c04e7a10bc77e02c8e84e9b00dd4b12fa0bb"
 dependencies = [
  "js-sys",
  "wasm-bindgen",

@@ -53,6 +53,9 @@ use reth_transaction_pool::{PoolConfig, TransactionPool};
 use std::{cmp::max, str::FromStr, sync::Arc, thread::available_parallelism};
 use tokio::sync::{mpsc::unbounded_channel, oneshot};
 
+#[cfg(feature = "open_performance_dashboard")]
+use perf_metrics::dashboard::DashboardListener;
+
 /// The builtin provider type of the reth node.
 // Note: we need to hardcode this because custom components might depend on it in associated types.
 type RethFullProviderType<DB, Evm> =
@@ -469,6 +472,14 @@ where
         let genesis_hash = init_genesis(provider_factory.clone())?;
 
         info!(target: "reth::cli", "\n{}", config.chain.display_hardforks());
+
+        #[cfg(feature = "open_performance_dashboard")]
+        {
+            let (dashboard_tx, dashboard_rx) = unbounded_channel();
+            let dashboard_listener = DashboardListener::new(dashboard_rx);
+            executor.spawn_critical("dashboard listener task", dashboard_listener);
+            perf_metrics::set_metric_event_sender(dashboard_tx);
+        }
 
         let consensus = config.consensus();
 

@@ -73,6 +73,7 @@ members = [
     "examples/polygon-p2p/",
     "examples/custom-inspector/",
     "testing/ef-tests/",
+    "crates/perf-metrics",
 ]
 default-members = ["bin/reth"]
 
@@ -244,9 +245,13 @@ reth-trie = { path = "crates/trie" }
 reth-trie-parallel = { path = "crates/trie-parallel" }
 
 # revm
-revm = { version = "7.2.0", features = ["std", "secp256k1"], default-features = false }
-revm-primitives = { version = "3.1.0", features = ["std"], default-features = false }
-revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "b3082f3" }
+# revm = { version = "7.2.0", features = ["std", "secp256k1"], default-features = false }
+# revm-primitives = { version = "3.1.0", features = ["std"], default-features = false }
+# revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "b3082f3" }
+
+revm = { git = "https://github.com/megaeth-labs/revm.git", branch = "rebase-v34", features = ["std", "secp256k1"], default-features = false }
+revm-primitives = { git = "https://github.com/megaeth-labs/revm.git", branch = "rebase-v34", features = ["std"], default-features = false }
+revm-inspectors = { git = "https://github.com/megaeth-labs/evm-inspectors.git", rev= "79170b6" }
 
 # eth
 alloy-chains = { version = "0.1", feature = ["serde", "rlp", "arbitrary"] }
@@ -350,3 +355,7 @@ proptest-derive = "0.4"
 serial_test = "3"
 similar-asserts = "1.5.0"
 test-fuzz = "5"
+
+## support perf test
+perf-metrics = { path = "./crates/perf-metrics"}
+revm-utils = { git = "https://github.com/megaeth-labs/revm.git", branch = "rebase-v34" }

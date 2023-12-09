@@ -52,6 +52,9 @@ reth-node-optimism = { workspace = true, optional = true, features = ["optimism"
 reth-node-core.workspace = true
 reth-node-builder.workspace = true
 
+revm-utils = { workspace = true, optional = true }
+revm = { workspace = true, optional = true}
+
 # crypto
 alloy-rlp.workspace = true
 alloy-chains.workspace = true
@@ -68,6 +71,7 @@ toml = { workspace = true, features = ["display"] }
 
 # metrics
 metrics-process = "=1.0.14"
+
 
 # test vectors generation
 proptest.workspace = true
@@ -93,6 +97,8 @@ similar-asserts.workspace = true
 itertools.workspace = true
 rayon.workspace = true
 boyer-moore-magiclen = "0.2.16"
+
+perf-metrics = { workspace = true, optional = true }
 
 [target.'cfg(unix)'.dependencies]
 tikv-jemallocator = { version = "0.5.0", optional = true }
@@ -134,6 +140,35 @@ optimism = [
 
 # no-op feature flag for switching between the `optimism` and default functionality in CI matrices
 ethereum = []
+# support perf test
+open_performance_dashboard = [
+    "reth-stages/open_performance_dashboard",
+    "perf-metrics",
+]
+enable_opcode_metrics = [
+    "perf-metrics/enable_opcode_metrics",
+    "reth-revm/enable_opcode_metrics",
+    "reth-stages/enable_opcode_metrics",
+    "open_performance_dashboard",
+]
+enable_cache_record = [
+    "perf-metrics/enable_cache_record",
+    "reth-revm/enable_cache_record",
+    "reth-stages/enable_cache_record",
+    "open_performance_dashboard",
+]
+enable_tps_gas_record = [
+    "perf-metrics/enable_tps_gas_record",
+    "reth-stages/enable_tps_gas_record",
+    "open_performance_dashboard",
+]
+finish_after_execution_stage = ["reth-stages/finish_after_execution_stage"]
+enable_execution_duration_record = [
+    "perf-metrics/enable_execution_duration_record",
+    "reth-stages/enable_execution_duration_record",
+    "reth-revm/enable_execution_duration_record",
+    "open_performance_dashboard",
+]
 
 [[bin]]
 name = "reth"
