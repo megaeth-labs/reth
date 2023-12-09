@@ -21,10 +21,12 @@ parking_lot.workspace = true
 thiserror.workspace = true
 
 ffi = { package = "reth-mdbx-sys", path = "./mdbx-sys" }
+perf-metrics = { workspace = true, optional = true }
 
 [features]
 default = []
 return-borrowed = []
+enable_db_speed_record =["perf-metrics"]
 
 [dev-dependencies]
 pprof = { workspace = true, features = ["flamegraph", "frame-pointer", "criterion"] }

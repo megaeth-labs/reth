@@ -60,3 +60,7 @@ optimism = [
   "reth-primitives/optimism",
   "reth-interfaces/optimism"
 ]
+enable_cache_record = []
+enable_db_speed_record = [
+  "reth-db/enable_db_speed_record",
+]

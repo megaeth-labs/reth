@@ -70,6 +70,12 @@ pub trait BlockExecutor {
 
     /// Returns the size hint of current in-memory changes.
     fn size_hint(&self) -> Option<usize>;
+
+    /// Get CacheDb metric size.
+    #[cfg(feature = "enable_cache_record")]
+    fn get_state_size(&self) -> usize {
+        0
+    }
 }
 
 /// A [BlockExecutor] capable of in-memory pruning of the data that will be written to the database.

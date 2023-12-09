@@ -302,6 +302,8 @@ impl<'a> EVMProcessor<'a> {
             .into())
         }
         let time = Instant::now();
+        #[cfg(feature = "enable_execute_measure")]
+        let _record = perf_metrics::ApplyPostBlockChangesRecord::new();
         self.apply_post_execution_state_change(block, total_difficulty)?;
         self.stats.apply_post_execution_state_changes_duration += time.elapsed();
 
@@ -413,6 +415,8 @@ impl<'a> BlockExecutor for EVMProcessor<'a> {
         total_difficulty: U256,
         senders: Option<Vec<Address>>,
     ) -> Result<(), BlockExecutionError> {
+        #[cfg(feature = "enable_execute_measure")]
+        perf_metrics::start_execute_tx_record();
         // execute block
         let receipts = self.execute_inner(block, total_difficulty, senders)?;
 
@@ -431,6 +435,8 @@ impl<'a> BlockExecutor for EVMProcessor<'a> {
             self.stats.receipt_root_duration += time.elapsed();
         }
 
+        #[cfg(feature = "enable_execute_measure")]
+        perf_metrics::verify_receipt_record();
         self.save_receipts(receipts)
     }
 
@@ -451,6 +457,8 @@ impl<'a> BlockExecutor for EVMProcessor<'a> {
 
         let mut cumulative_gas_used = 0;
         let mut receipts = Vec::with_capacity(block.body.len());
+        #[cfg(feature = "enable_execute_measure")]
+        perf_metrics::start_execute_tx_sub_recorder();
         for (transaction, sender) in block.body.iter().zip(senders) {
             let time = Instant::now();
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
@@ -465,6 +473,12 @@ impl<'a> BlockExecutor for EVMProcessor<'a> {
             }
             // Execute transaction.
             let ResultAndState { result, state } = self.transact(transaction, sender)?;
+            #[cfg(feature = "enable_execute_measure")]
+            perf_metrics::transact_record();
+
+            #[cfg(feature = "enable_opcode_metrics")]
+            perf_metrics::record_opcode();
+
             trace!(
                 target: "evm",
                 ?transaction, ?result, ?state,
@@ -474,6 +488,8 @@ impl<'a> BlockExecutor for EVMProcessor<'a> {
             let time = Instant::now();
 
             self.db_mut().commit(state);
+            #[cfg(feature = "enable_execute_measure")]
+            perf_metrics::commit_changes_record();
 
             self.stats.apply_state_duration += time.elapsed();
 
@@ -492,6 +508,8 @@ impl<'a> BlockExecutor for EVMProcessor<'a> {
                 #[cfg(feature = "optimism")]
                 deposit_nonce: None,
             });
+            #[cfg(feature = "enable_execute_measure")]
+            perf_metrics::add_receipt_record();
         }
 
         Ok((receipts, cumulative_gas_used))
@@ -512,6 +530,13 @@ impl<'a> BlockExecutor for EVMProcessor<'a> {
 
     fn size_hint(&self) -> Option<usize> {
         self.evm.db.as_ref().map(|db| db.bundle_size_hint())
+    }
+
+    /// Get state size.
+    #[cfg(feature = "enable_cache_record")]
+    fn get_state_size(&self) -> usize {
+        //TODO
+        0
     }
 }
 

@@ -55,6 +55,7 @@ members = [
     "examples/rpc-db/",
     "examples/trace-transaction-cli/",
     "testing/ef-tests/",
+    "crates/perf-metrics",
 ]
 default-members = ["bin/reth"]
 
@@ -137,8 +138,8 @@ reth-transaction-pool = { path = "crates/transaction-pool" }
 reth-trie = { path = "crates/trie" }
 
 # revm
-revm = { git = "https://github.com/bluealloy/revm", branch = "reth_freeze",  features = ["std", "secp256k1"], default-features = false }
-revm-primitives = { git = "https://github.com/bluealloy/revm", branch = "reth_freeze", features = ["std"], default-features = false }
+revm = { git = "https://github.com/megaeth-labs/revm", branch = "andy/dev/new-perf",  features = ["std", "secp256k1"], default-features = false }
+revm-primitives = { git = "https://github.com/megaeth-labs/revm", branch = "andy/dev/new-perf", features = ["std"], default-features = false }
 
 # eth
 alloy-primitives = "0.5"
@@ -221,3 +222,7 @@ pprof = "0.13"
 proptest = "1.0"
 proptest-derive = "0.4"
 serial_test = "2"
+
+## support perf test
+perf-metrics = { path = "./crates/perf-metrics"}
+revm-utils = { git = "https://github.com/megaeth-labs/revm", branch = "andy/dev/new-perf"}

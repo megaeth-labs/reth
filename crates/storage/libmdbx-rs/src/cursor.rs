@@ -91,6 +91,12 @@ where
             let key_ptr = key_val.iov_base;
             let data_ptr = data_val.iov_base;
             self.txn.txn_execute(|txn| {
+                #[cfg(feature = "enable_db_speed_record")]
+                let _record = perf_metrics::db_metric::ReadRecord::new(
+                    key_ptr,
+                    &key_val as *const ffi::MDBX_val,
+                    &data_val as *const ffi::MDBX_val,
+                );
                 let v = mdbx_result(ffi::mdbx_cursor_get(
                     self.cursor,
                     &mut key_val,
@@ -440,6 +446,8 @@ impl Cursor<RW> {
             ffi::MDBX_val { iov_len: data.len(), iov_base: data.as_ptr() as *mut c_void };
         mdbx_result(unsafe {
             self.txn.txn_execute(|_| {
+                #[cfg(feature = "enable_db_speed_record")]
+                let _record = perf_metrics::db_metric::WriteRecord::new(data_val.iov_len);
                 ffi::mdbx_cursor_put(self.cursor, &key_val, &mut data_val, flags.bits())
             })
         })?;

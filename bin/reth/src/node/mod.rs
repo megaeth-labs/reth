@@ -90,6 +90,9 @@ use std::{
 use tokio::sync::{mpsc::unbounded_channel, oneshot, watch};
 use tracing::*;
 
+#[cfg(feature = "open_performance_dashboard")]
+use perf_metrics::dashboard::DashboardListener;
+
 pub mod cl_events;
 pub mod events;
 
@@ -275,6 +278,14 @@ impl<Ext: RethCliExt> NodeCommand<Ext> {
         let genesis_hash = init_genesis(Arc::clone(&db), self.chain.clone())?;
 
         info!(target: "reth::cli", "{}", DisplayHardforks::new(self.chain.hardforks()));
+
+        #[cfg(feature = "open_performance_dashboard")]
+        {
+            let (dashboard_tx, dashboard_rx) = unbounded_channel();
+            let dashboard_listener = DashboardListener::new(dashboard_rx);
+            ctx.task_executor.spawn_critical("dashboard listener task", dashboard_listener);
+            perf_metrics::set_metric_event_sender(dashboard_tx);
+        }
 
         let consensus = self.consensus();
 

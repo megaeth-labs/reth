@@ -19,6 +19,9 @@ reth-consensus-common.workspace = true
 # revm
 revm.workspace = true
 
+# metric
+perf-metrics = { workspace = true, optional = true }
+
 # common
 tracing.workspace = true
 
@@ -31,4 +34,15 @@ optimism = [
   "reth-primitives/optimism",
   "reth-consensus-common/optimism",
   "reth-interfaces/optimism",
+]
+enable_opcode_metrics = [
+    "revm/enable_opcode_metrics",
+    "perf-metrics/enable_opcode_metrics",
+    ]
+enable_cache_record = [
+    "revm/enable_cache_record",
+    "reth-provider/enable_cache_record",
+]
+enable_execute_measure = [
+    "perf-metrics/enable_execute_measure",
 ]
