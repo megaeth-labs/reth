@@ -31,10 +31,14 @@ const MGAS_TO_GAS: u64 = 1_000_000u64;
     feature = "enable_execute_measure"
 ))]
 const COL_WIDTH_MIDDLE: usize = 14;
-#[cfg(any(feature = "enable_cache_record", feature = "enable_execute_measure"))]
+#[cfg(feature = "enable_cache_record")]
 const COL_WIDTH_BIG: usize = 20;
-#[cfg(any(feature = "enable_cache_record", feature = "enable_execution_duration_record"))]
-const COL_WIDTH_LARGE: usize = 30;
+#[cfg(any(
+    feature = "enable_cache_record",
+    feature = "enable_execution_duration_record",
+    feature = "enable_execute_measure"
+))]
+const COL_WIDTH_LARGE: usize = 40;
 
 #[cfg(feature = "enable_opcode_metrics")]
 struct OpcodeMergeRecord {
@@ -367,9 +371,9 @@ impl ExecutionDurationDisplayer {
 
         self.print_line("total", self.record.total());
         self.print_line("misc", self.record.misc());
-        self.print_line("fetching_blocks", self.record.fetching_blocks());
+        self.print_line("fetch_block", self.record.fetch_block());
         self.print_line("execute_and_verify_receipt", self.record.execution());
-        self.print_line("process_state", self.record.process_state());
+        self.print_line("take_output_state", self.record.take_output_state());
         self.print_line("write_to_db", self.record.write_to_db());
 
         println!();
@@ -626,44 +630,56 @@ impl ExecuteTxsDisplayer {
         let transact = cycles_as_secs(self.record.transact());
         let commit_changes = cycles_as_secs(self.record.commit_changes());
         let add_receipt = cycles_as_secs(self.record.add_receipt());
-        let apply_post_block_changes = cycles_as_secs(self.record.apply_post_block_changes());
+        let apply_post_block_changes =
+            cycles_as_secs(self.record.apply_post_execution_state_change());
+        let merge_transactions = cycles_as_secs(self.record.merge_transactions());
         let verify_receipt = cycles_as_secs(self.record.verify_receipt());
-        let execute =
-            transact + commit_changes + add_receipt + apply_post_block_changes + verify_receipt;
+        let save_receipts = cycles_as_secs(self.record.save_receipts());
+        let execute = transact +
+            commit_changes +
+            add_receipt +
+            apply_post_block_changes +
+            merge_transactions +
+            verify_receipt +
+            save_receipts;
         let misc = total - execute;
 
         let transact_pct = transact as f64 / total as f64;
         let commit_changes_pct = commit_changes as f64 / total as f64;
         let add_receipt_pct = add_receipt as f64 / total as f64;
         let apply_post_block_changes_pct = apply_post_block_changes as f64 / total as f64;
+        let merge_transactions_pct = merge_transactions as f64 / total as f64;
         let verify_receipt_pct = verify_receipt as f64 / total as f64;
+        let save_receipts_pct = save_receipts as f64 / total as f64;
         let misc_pct = misc as f64 / total as f64;
 
         println!();
         println!("===============================Metric of execute txs ====================================================");
         println!(
-            "{: <COL_WIDTH_BIG$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
+            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
             "Cat.", "Time (s)", "Time (%)",
         );
 
         self.print_line("total", total, 1.0);
         self.print_line("misc", misc, misc_pct);
         self.print_line("transact", transact, transact_pct);
-        self.print_line("commit_changes", commit_changes, commit_changes_pct);
+        self.print_line("commit", commit_changes, commit_changes_pct);
         self.print_line("add_receipt", add_receipt, add_receipt_pct);
         self.print_line(
-            "apply_block_changes",
+            "apply_post_execution_state_change",
             apply_post_block_changes,
             apply_post_block_changes_pct,
         );
+        self.print_line("merge_transactions", merge_transactions, merge_transactions_pct);
         self.print_line("verify_receipt", verify_receipt, verify_receipt_pct);
+        self.print_line("save receipts", save_receipts, save_receipts_pct);
 
         println!();
     }
 
     fn print_line(&self, cat: &str, time: f64, percent: f64) {
         println!(
-            "{: <COL_WIDTH_BIG$}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}",
+            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}",
             cat,
             time,
             percent * 100.0,

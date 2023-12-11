@@ -171,7 +171,7 @@ pub fn record_after_block_with_senders() {
 
         #[cfg(feature = "enable_execution_duration_record")]
         {
-            _record.duration_record.add_fetching_blocks_duration();
+            _record.duration_record.add_fetch_block_duration();
             _record.duration_record.start_time_record();
         }
 
@@ -211,12 +211,12 @@ pub fn record_after_get_tps(_block_number: u64, _txs: u64, _gas: u64) {
     }
 }
 
-pub fn record_after_process_state() {
+pub fn record_after_take_output_state() {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
 
         #[cfg(feature = "enable_execution_duration_record")]
-        _record.duration_record.add_process_state_duration();
+        _record.duration_record.add_take_output_state_duration();
     }
 }
 
@@ -362,12 +362,21 @@ pub fn add_receipt_record() {
     }
 }
 
-/// apply_post_block_changes_record
+/// apply_post_execution_state_change_record
 #[cfg(feature = "enable_execute_measure")]
-pub fn apply_post_block_changes_record() {
+pub fn apply_post_execution_state_change_record() {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
-        _record.execute_tx_record.apply_post_block_changes_record()
+        _record.execute_tx_record.apply_post_execution_state_change_record()
+    }
+}
+
+/// merge_transactions_record
+#[cfg(feature = "enable_execute_measure")]
+pub fn merge_transactions_record() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.execute_tx_record.merge_transactions_record()
     }
 }
 
@@ -380,6 +389,15 @@ pub fn verify_receipt_record() {
     }
 }
 
+/// save_receipts_record
+#[cfg(feature = "enable_execute_measure")]
+pub fn save_receipts_record() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.execute_tx_record.save_receipts_record()
+    }
+}
+
 /// get_execute_tx_record
 #[cfg(feature = "enable_execute_measure")]
 pub fn get_execute_tx_record() -> ExecuteTxsRecord {
@@ -389,23 +407,23 @@ pub fn get_execute_tx_record() -> ExecuteTxsRecord {
     }
 }
 
-/// Record for apply_post_block_changes
+/// Record for verfity_and_save_receipts
 #[cfg(feature = "enable_execute_measure")]
-pub struct ApplyPostBlockChangesRecord;
+pub struct VerifyAndSaveReceiptsRecord;
 
 #[cfg(feature = "enable_execute_measure")]
-impl ApplyPostBlockChangesRecord {
-    /// Return ApplyPostBlockChangesRecord.
+impl VerifyAndSaveReceiptsRecord {
+    /// Return VerifyAndSaveReceiptsRecord
     pub fn new() -> Self {
-        start_execute_tx_sub_recorder();
-        ApplyPostBlockChangesRecord
+        verify_receipt_record();
+        VerifyAndSaveReceiptsRecord
     }
 }
 
 #[cfg(feature = "enable_execute_measure")]
-impl Drop for ApplyPostBlockChangesRecord {
+impl Drop for VerifyAndSaveReceiptsRecord {
     fn drop(&mut self) {
-        apply_post_block_changes_record();
+        save_receipts_record();
     }
 }
 
