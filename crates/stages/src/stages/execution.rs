@@ -196,8 +196,6 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             stage_progress = block_number;
 
             stage_checkpoint.progress.processed += block.gas_used;
-            #[cfg(feature = "open_performance_dashboard")]
-            perf_metrics::record_after_process_state();
 
             // Check if we should commit now
             let bundle_size_hint = executor.size_hint().unwrap_or_default() as u64;
@@ -225,13 +223,17 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                 break
             }
         }
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::record_after_loop();
+
         let time = Instant::now();
         let state = executor.take_output_state();
+        #[cfg(feature = "open_performance_dashboard")]
+        perf_metrics::record_after_take_output_state();
+
         let write_preparation_duration = time.elapsed();
 
         let time = Instant::now();
-        #[cfg(feature = "open_performance_dashboard")]
-        perf_metrics::record_after_loop();
         // write output
         state.write_to_db(provider.tx_ref(), OriginalValuesKnown::Yes)?;
         #[cfg(feature = "open_performance_dashboard")]

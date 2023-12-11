@@ -314,8 +314,10 @@ where
         }
         let time = Instant::now();
         #[cfg(feature = "enable_execute_measure")]
-        let _record = perf_metrics::ApplyPostBlockChangesRecord::new();
+        perf_metrics::start_execute_tx_sub_recorder();
         self.apply_post_execution_state_change(block, total_difficulty)?;
+        #[cfg(feature = "enable_execute_measure")]
+        perf_metrics::apply_post_execution_state_change_record();
         self.stats.apply_post_execution_state_changes_duration += time.elapsed();
 
         let time = Instant::now();
@@ -334,6 +336,8 @@ where
             BundleRetention::PlainState
         };
         self.db_mut().merge_transitions(retention);
+        #[cfg(feature = "enable_execute_measure")]
+        perf_metrics::merge_transactions_record();
         self.stats.merge_transitions_duration += time.elapsed();
 
         if self.first_block.is_none() {
@@ -448,7 +452,7 @@ where
         }
 
         #[cfg(feature = "enable_execute_measure")]
-        perf_metrics::verify_receipt_record();
+        let _record = perf_metrics::VerifyAndSaveReceiptsRecord::new();
         self.save_receipts(receipts)
     }
 

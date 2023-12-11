@@ -17,10 +17,14 @@ pub struct ExecuteTxsRecord {
     commit_changes: u64,
     /// Time of add receipt.
     add_receipt: u64,
-    /// Time of apply_post_block_changes.
-    apply_post_block_changes: u64,
+    /// Time of apply_post_execution_state_change.
+    apply_post_execution_state_change: u64,
+    /// Time of merge_transactions.
+    merge_transactions: u64,
     /// Time of verify_receipt.
     verify_receipt: u64,
+    /// Time of save_receipts.
+    save_receipts: u64,
 }
 
 impl ExecuteTxsRecord {
@@ -48,16 +52,26 @@ impl ExecuteTxsRecord {
         let (cycles, _) = self.record_sub_time();
         self.add_receipt = self.add_receipt.checked_add(cycles).expect("overflow");
     }
-    /// Add time of apply_post_block_changes.
-    pub(super) fn apply_post_block_changes_record(&mut self) {
+    /// Add time of apply_post_execution_state_change.
+    pub(super) fn apply_post_execution_state_change_record(&mut self) {
         let (cycles, _) = self.record_sub_time();
-        self.apply_post_block_changes =
-            self.apply_post_block_changes.checked_add(cycles).expect("overflow");
+        self.apply_post_execution_state_change =
+            self.apply_post_execution_state_change.checked_add(cycles).expect("overflow");
+    }
+    /// Add time of merge_transactions.
+    pub(super) fn merge_transactions_record(&mut self) {
+        let (cycles, _) = self.record_sub_time();
+        self.merge_transactions = self.merge_transactions.checked_add(cycles).expect("overflow");
     }
     /// Add time of verify_receipt.
     pub(super) fn verify_receipt_record(&mut self) {
-        let (cycles, now) = self.record_sub_time();
+        let (cycles, _) = self.record_sub_time();
         self.verify_receipt = self.verify_receipt.checked_add(cycles).expect("overflow");
+    }
+    /// Add time of save_receipts.
+    pub(super) fn save_receipts_record(&mut self) {
+        let (cycles, now) = self.record_sub_time();
+        self.save_receipts = self.save_receipts.checked_add(cycles).expect("overflow");
         self.record_total_time(now);
     }
     /// Record total time.
@@ -91,13 +105,21 @@ impl ExecuteTxsRecord {
     pub fn add_receipt(&self) -> u64 {
         self.add_receipt
     }
-    /// Return apply_post_block_changes.
-    pub fn apply_post_block_changes(&self) -> u64 {
-        self.apply_post_block_changes
+    /// Return apply_post_execution_state_change.
+    pub fn apply_post_execution_state_change(&self) -> u64 {
+        self.apply_post_execution_state_change
+    }
+    /// Return merge_transactions.
+    pub fn merge_transactions(&self) -> u64 {
+        self.merge_transactions
     }
     /// Return verify_receipt.
     pub fn verify_receipt(&self) -> u64 {
         self.verify_receipt
+    }
+    /// Return save_receipts.
+    pub fn save_receipts(&self) -> u64 {
+        self.save_receipts
     }
     /// TODO: This function needs to be deleted later on.
     pub fn print(&self) {
@@ -105,7 +127,7 @@ impl ExecuteTxsRecord {
         self.printline("transact", self.transact);
         self.printline("commit_changes", self.commit_changes);
         self.printline("add receipt", self.add_receipt);
-        self.printline("apply_post_block_changes", self.apply_post_block_changes);
+        self.printline("apply_post_execution_state_change", self.apply_post_execution_state_change);
         self.printline("verify_receipt", self.verify_receipt);
     }
 
