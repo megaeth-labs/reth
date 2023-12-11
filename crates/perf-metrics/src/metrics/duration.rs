@@ -1,6 +1,6 @@
 //! This module is used to support recording the overhead of various parts
 //! of the execute_inner function in execution stage. It records the overheads of
-//! five parts in execute_inner, namely the overheads of fetching_blocks, executions,
+//! five parts in execute_inner, namely the overheads of fetch_block, executions,
 //! process state, write to db, and the total overhead of execute_inner.
 use revm_utils::time_utils::instant::Instant;
 
@@ -14,11 +14,11 @@ pub struct ExecutionDurationRecord {
     // Time of execute inner.
     total: u64,
     // Time of fetching blocks(include get_block_td and block_with_senders).
-    fetching_blocks: u64,
+    fetch_block: u64,
     // Time of Revm execution(execute_and_verify_receipt).
     execution: u64,
     // Time of process state(state.extend)
-    process_state: u64,
+    take_output_state: u64,
     // Time of write to db
     write_to_db: u64,
 }
@@ -38,10 +38,10 @@ impl ExecutionDurationRecord {
         let cycles = Instant::now().checked_cycles_since(self.total_recorder).expect("overflow");
         self.total = self.total.checked_add(cycles).expect("overflow");
     }
-    /// Add time of fetching_blocks.
-    pub(crate) fn add_fetching_blocks_duration(&mut self) {
+    /// Add time of fetch_block.
+    pub(crate) fn add_fetch_block_duration(&mut self) {
         let cycles = Instant::now().checked_cycles_since(self.time_recorder).expect("overflow");
-        self.fetching_blocks = self.fetching_blocks.checked_add(cycles).expect("overflow");
+        self.fetch_block = self.fetch_block.checked_add(cycles).expect("overflow");
     }
     /// Add time of Revm execution.
     pub(crate) fn add_execute_tx_duration(&mut self) {
@@ -49,9 +49,9 @@ impl ExecutionDurationRecord {
         self.execution = self.execution.checked_add(cycles).expect("overflow");
     }
     /// Add time of process state
-    pub(crate) fn add_process_state_duration(&mut self) {
+    pub(crate) fn add_take_output_state_duration(&mut self) {
         let cycles = Instant::now().checked_cycles_since(self.time_recorder).expect("overflow");
-        self.process_state = self.process_state.checked_add(cycles).expect("overflow");
+        self.take_output_state = self.take_output_state.checked_add(cycles).expect("overflow");
     }
     /// Add time of write to db
     pub(crate) fn add_write_to_db_duration(&mut self) {
@@ -67,16 +67,16 @@ impl ExecutionDurationRecord {
         self.total
     }
     /// Return the overhead of fetching blocks.
-    pub fn fetching_blocks(&self) -> u64 {
-        self.fetching_blocks
+    pub fn fetch_block(&self) -> u64 {
+        self.fetch_block
     }
     /// Return the overhead of Revm execution.
     pub fn execution(&self) -> u64 {
         self.execution
     }
     /// Return the overhead of process state.
-    pub fn process_state(&self) -> u64 {
-        self.process_state
+    pub fn take_output_state(&self) -> u64 {
+        self.take_output_state
     }
     /// Return the overhead of write to db.
     pub fn write_to_db(&self) -> u64 {
@@ -84,6 +84,6 @@ impl ExecutionDurationRecord {
     }
     /// Return the overhead of misc.
     pub fn misc(&self) -> u64 {
-        self.total - self.fetching_blocks - self.execution - self.process_state - self.write_to_db
+        self.total - self.fetch_block - self.execution - self.take_output_state - self.write_to_db
     }
 }
