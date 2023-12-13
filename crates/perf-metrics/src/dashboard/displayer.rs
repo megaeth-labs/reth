@@ -476,7 +476,7 @@ impl CacheDBRecordDisplayer {
 
     fn print_penalty(&self, name: &str, function: Function) {
         let index = function as usize;
-        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.8}", name, cycles_as_secs(self.cache_db_record.penalty_stats().time.function[index]) / 60.0};
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", name, cycles_as_secs(self.cache_db_record.penalty_stats().time.function[index])};
     }
 
     pub(crate) fn print(&self) {
@@ -502,12 +502,12 @@ impl CacheDBRecordDisplayer {
         // print total penalty
         let total_penalty = self.cache_db_record.penalty_stats().time.function.iter().sum();
         println!("=====================Misses penalty in CacheDb====================");
-        println! {"{:<COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}", "CacheDb functions", "Penalty time(min)"};
+        println! {"{:<COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}", "CacheDb functions", "Penalty time(s)"};
         self.print_penalty("blockhash", Function::BlockHash);
         self.print_penalty("code_by_hash", Function::CodeByHash);
         self.print_penalty("load_account/basic", Function::LoadCacheAccount);
         self.print_penalty("storage", Function::Storage);
-        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "total", cycles_as_secs(total_penalty) / 60.0 };
+        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "total", cycles_as_secs(total_penalty)};
         println!();
 
         // print penalty distribution

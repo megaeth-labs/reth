@@ -546,8 +546,7 @@ where
     /// Get state size.
     #[cfg(feature = "enable_cache_record")]
     fn get_state_size(&self) -> usize {
-        //TODO
-        0
+        self.evm.db.as_ref().map(|db| db.mem_usage()).unwrap_or(0)
     }
 }
 
