@@ -303,7 +303,7 @@ impl<'a> EVMProcessor<'a> {
         }
         let time = Instant::now();
         #[cfg(feature = "enable_execute_measure")]
-        perf_metrics::start_execute_tx_sub_recorder();
+        perf_metrics::start_execute_tx_sub_record();
         self.apply_post_execution_state_change(block, total_difficulty)?;
         #[cfg(feature = "enable_execute_measure")]
         perf_metrics::apply_post_execution_state_change_record();
@@ -462,7 +462,7 @@ impl<'a> BlockExecutor for EVMProcessor<'a> {
         let mut cumulative_gas_used = 0;
         let mut receipts = Vec::with_capacity(block.body.len());
         #[cfg(feature = "enable_execute_measure")]
-        perf_metrics::start_execute_tx_sub_recorder();
+        perf_metrics::start_execute_tx_sub_record();
         for (transaction, sender) in block.body.iter().zip(senders) {
             let time = Instant::now();
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,

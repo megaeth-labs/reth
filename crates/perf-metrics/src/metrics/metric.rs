@@ -8,6 +8,8 @@ use super::execute_tx::ExecuteTxsRecord;
 use super::speed::DatabaseOperationRecord;
 #[cfg(feature = "enable_tps_gas_record")]
 use super::tps_gas::TpsGasRecord;
+#[cfg(feature = "enable_write_to_db_measure")]
+use super::write_to_db::WriteToDbRecord;
 #[cfg(feature = "enable_cache_record")]
 use revm_utils::metrics::types::CacheDbRecord;
 #[cfg(feature = "enable_opcode_metrics")]
@@ -66,6 +68,12 @@ pub enum MetricEvent {
         /// execute txs record.
         record: ExecuteTxsRecord,
     },
+    /// Measure write_to_db one deeper level info.
+    #[cfg(feature = "enable_write_to_db_measure")]
+    WriteToDbInfo {
+        /// write_to_db record.
+        record: WriteToDbRecord,
+    },
 }
 
 /// This structure is used to support all metric operations of
@@ -90,6 +98,9 @@ struct ExecutionStageMetric {
     /// Record information on in-depth measurement of function execute_and_verify_receipt.
     #[cfg(feature = "enable_execute_measure")]
     execute_tx_record: ExecuteTxsRecord,
+    /// Record information on in-depth measurement of function write_to_db.
+    #[cfg(feature = "enable_write_to_db_measure")]
+    write_to_db_record: WriteToDbRecord,
 
     /// A channel for sending recorded indicator information to the dashboard for display.
     events_tx: Option<MetricEventsSender>,
@@ -292,6 +303,14 @@ pub fn record_at_end(_cachedb_size: usize) {
                 .expect("No sender")
                 .send(MetricEvent::ExecuteTxsInfo { record: _record.execute_tx_record });
         }
+        #[cfg(feature = "enable_write_to_db_measure")]
+        {
+            let _ = _record
+                .events_tx
+                .as_mut()
+                .expect("No sender")
+                .send(MetricEvent::WriteToDbInfo { record: _record.write_to_db_record });
+        }
     }
 }
 // *************************************************************************************************
@@ -328,10 +347,10 @@ pub fn start_execute_tx_record() {
 
 /// start execute_tx sub record.
 #[cfg(feature = "enable_execute_measure")]
-pub fn start_execute_tx_sub_recorder() {
+pub fn start_execute_tx_sub_record() {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
-        _record.execute_tx_record.start_sub_recorder();
+        _record.execute_tx_record.start_sub_record();
     }
 }
 
@@ -426,7 +445,150 @@ impl Drop for VerifyAndSaveReceiptsRecord {
         save_receipts_record();
     }
 }
-
 // *************************************************************************************************
 //                              functions called by executor end
+// *************************************************************************************************
+
+// *************************************************************************************************
+//
+// The function within this range will be used to measure write_to_db and will be called in
+// write_to_db.
+//
+// *************************************************************************************************
+/// start write_to_db record.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn start_write_to_db_record() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.start_record();
+    }
+}
+
+/// start write_to_db sub record.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn start_write_to_db_sub_record() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.start_sub_record();
+    }
+}
+
+/// Record data size of write storage changes in StateReverts's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_revert_storage_size(size: usize) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_revert_storage_size(size);
+    }
+}
+
+/// Record time of write storage changes in StateReverts's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_revert_storage_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_revert_storage_time();
+    }
+}
+
+/// Record data size of write account changes in StateReverts's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_revert_account_size(size: usize) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_revert_account_size(size);
+    }
+}
+
+/// Record time of write account changes in StateReverts's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_revert_account_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_revert_account_time();
+    }
+}
+
+/// Record data size of write receipts in BundleStateWithReceipts's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_write_receipts_size(size: usize) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_write_receipts_size(size);
+    }
+}
+
+/// Record time of write receipts  in BundleStateWithReceipts's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_write_receipts_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_write_receipts_time();
+    }
+}
+
+/// Record time of sort in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_sort_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_sort_time();
+    }
+}
+
+/// Record data size of write account in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_state_account_size(size: usize) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_state_account_size(size);
+    }
+}
+
+/// Record time of write account in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_state_account_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_state_account_time();
+    }
+}
+
+/// Record data size of write bytecode in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_state_bytecode_size(size: usize) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_state_bytecode_size(size);
+    }
+}
+
+/// Record time of write bytecode in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_state_bytecode_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_state_bytecode_time();
+    }
+}
+
+/// Record data size of write storage in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_state_storage_size(size: usize) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_state_storage_size(size);
+    }
+}
+
+/// Record time of write storage in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub fn record_state_storage_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_state_storage_time();
+    }
+}
+// *************************************************************************************************
+//                              functions called by write_to_db end
 // *************************************************************************************************

@@ -33,7 +33,7 @@ impl ExecuteTxsRecord {
         self.start_record = Instant::now();
     }
     /// Start sub record.
-    pub(super) fn start_sub_recorder(&mut self) {
+    pub(super) fn start_sub_record(&mut self) {
         self.sub_record = Instant::now();
     }
 

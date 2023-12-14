@@ -6275,6 +6275,7 @@ dependencies = [
  "itertools 0.11.0",
  "metrics",
  "parking_lot 0.12.1",
+ "perf-metrics",
  "pin-project",
  "rand 0.8.5",
  "rayon",
