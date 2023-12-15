@@ -6,6 +6,8 @@ mod execute_tx;
 mod speed;
 #[cfg(feature = "enable_tps_gas_record")]
 mod tps_gas;
+#[cfg(feature = "enable_write_to_db_measure")]
+mod write_to_db;
 
 pub mod metric;
 
@@ -20,3 +22,6 @@ pub use speed::DatabaseOperationRecord;
 
 #[cfg(feature = "enable_execute_measure")]
 pub use execute_tx::ExecuteTxsRecord;
+
+#[cfg(feature = "enable_write_to_db_measure")]
+pub use write_to_db::WriteToDbRecord;
