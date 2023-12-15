@@ -314,7 +314,7 @@ where
         }
         let time = Instant::now();
         #[cfg(feature = "enable_execute_measure")]
-        perf_metrics::start_execute_tx_sub_recorder();
+        perf_metrics::start_execute_tx_sub_record();
         self.apply_post_execution_state_change(block, total_difficulty)?;
         #[cfg(feature = "enable_execute_measure")]
         perf_metrics::apply_post_execution_state_change_record();

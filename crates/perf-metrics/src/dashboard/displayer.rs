@@ -28,7 +28,8 @@ const MGAS_TO_GAS: u64 = 1_000_000u64;
     feature = "enable_opcode_metrics",
     feature = "enable_cache_record",
     feature = "enable_execution_duration_record",
-    feature = "enable_execute_measure"
+    feature = "enable_execute_measure",
+    feature = "enable_write_to_db_measure"
 ))]
 const COL_WIDTH_MIDDLE: usize = 14;
 #[cfg(feature = "enable_cache_record")]
@@ -36,7 +37,8 @@ const COL_WIDTH_BIG: usize = 20;
 #[cfg(any(
     feature = "enable_cache_record",
     feature = "enable_execution_duration_record",
-    feature = "enable_execute_measure"
+    feature = "enable_execute_measure",
+    feature = "enable_write_to_db_measure"
 ))]
 const COL_WIDTH_LARGE: usize = 40;
 
@@ -391,10 +393,6 @@ impl DBSpeedDisplayer {
         self.record = record;
     }
 
-    fn convert_bytes_to_mega(&self, size: usize) -> f64 {
-        size as f64 / 1024.0 / 1024.0
-    }
-
     pub(crate) fn print(&self) {
         println!();
         println!("===============================Metric of db speed============================");
@@ -403,7 +401,7 @@ impl DBSpeedDisplayer {
         let col_len = 20;
 
         let (size, time) = self.record.header_td_info();
-        let header_td_size = self.convert_bytes_to_mega(size);
+        let header_td_size = convert_bytes_to_mega(size);
         let header_td_time = time.as_secs_f64();
         let header_td_rate = header_td_size / header_td_time;
         println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "header_td         ",
@@ -411,14 +409,14 @@ impl DBSpeedDisplayer {
 
         let (size, time) = self.record.block_with_senders_info();
         let block_with_senders_time = time.as_secs_f64();
-        let block_with_senders_size = self.convert_bytes_to_mega(size);
+        let block_with_senders_size = convert_bytes_to_mega(size);
         let block_with_senders_rate = block_with_senders_size / block_with_senders_time;
         println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "header_with_senders",
         block_with_senders_size, block_with_senders_time, block_with_senders_rate};
 
         let (size, time) = self.record.write_to_db_info();
         let write_to_db_time = time.as_secs_f64();
-        let write_to_db_size = self.convert_bytes_to_mega(size);
+        let write_to_db_size = convert_bytes_to_mega(size);
         let write_to_db_rate = write_to_db_size / write_to_db_time;
         println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "write_to_db            ",
         write_to_db_size, write_to_db_time, write_to_db_rate};
@@ -690,8 +688,154 @@ impl ExecuteTxsDisplayer {
     feature = "enable_opcode_metrics",
     feature = "enable_cache_record",
     feature = "enable_execution_duration_record",
-    feature = "enable_execute_measure"
+    feature = "enable_execute_measure",
+    feature = "enable_write_to_db_measure"
 ))]
 fn cycles_as_secs(cycles: u64) -> f64 {
     revm_utils::time_utils::convert_cycles_to_duration(cycles).as_secs_f64()
+}
+
+#[cfg(feature = "enable_write_to_db_measure")]
+use crate::metrics::WriteToDbRecord;
+
+#[cfg(feature = "enable_write_to_db_measure")]
+#[derive(Debug, Default)]
+pub(crate) struct WriteToDbDisplayer {
+    record: WriteToDbRecord,
+}
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl WriteToDbDisplayer {
+    pub(crate) fn record(&mut self, record: WriteToDbRecord) {
+        self.record = record;
+    }
+
+    pub(crate) fn print(&self) {
+        // size
+        let revert_storage_size = convert_bytes_to_mega(self.record.revert_storage_size());
+        let revert_account_size = convert_bytes_to_mega(self.record.revert_account_size());
+        let write_receipts_size = convert_bytes_to_mega(self.record.write_receipts_size());
+        let state_account_size = convert_bytes_to_mega(self.record.state_account_size());
+        let state_bytecode_size = convert_bytes_to_mega(self.record.state_bytecode_size());
+        let state_storage_size = convert_bytes_to_mega(self.record.state_storage_size());
+        let total_size = revert_storage_size +
+            revert_account_size +
+            write_receipts_size +
+            state_account_size +
+            state_bytecode_size +
+            state_storage_size;
+
+        // time
+        let total_time = cycles_as_secs(self.record.total_time());
+        let revert_storage_time = cycles_as_secs(self.record.revert_storage_time());
+        let revert_account_time = cycles_as_secs(self.record.revert_account_time());
+        let write_receipts_time = cycles_as_secs(self.record.write_receipts_time());
+        let sort_time = cycles_as_secs(self.record.sort_time());
+        let state_account_time = cycles_as_secs(self.record.state_account_time());
+        let state_bytecode_time = cycles_as_secs(self.record.state_bytecode_time());
+        let state_storage_time = cycles_as_secs(self.record.state_storage_time());
+
+        // time pct
+        let revert_storage_pct = revert_storage_time as f64 / total_time as f64;
+        let revert_account_pct = revert_account_time as f64 / total_time as f64;
+        let write_receipts_pct = write_receipts_time as f64 / total_time as f64;
+        let sort_pct = sort_time as f64 / total_time as f64;
+        let state_account_pct = state_account_time as f64 / total_time as f64;
+        let state_bytecode_pct = state_bytecode_time as f64 / total_time as f64;
+        let state_storage_pct = state_storage_time as f64 / total_time as f64;
+
+        // rate
+        let revert_storage_rate = revert_storage_size / revert_storage_time;
+        let revert_account_rate = revert_account_size / revert_account_time;
+        let write_receipts_rate = write_receipts_size / write_receipts_time;
+        let state_account_rate = state_account_size / state_account_time;
+        let state_bytecode_rate = state_bytecode_size / state_bytecode_time;
+        let state_storage_rate = state_storage_size / state_storage_time;
+        let avg_rate = total_size / total_time;
+
+        // print
+        println!();
+        println!("=================================================Metric of write_to_db ===============================================");
+        println!(
+            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_LARGE$}",
+            "Cat.",  
+            "Size (MBytes)",   
+            "Time (s)",    
+            "Time (%)",   
+            "Rate (MBytes/s)"
+        );
+
+        self.print_line("total_of_write_to_db", total_size, total_time, 1.0, avg_rate);
+        self.print_line(
+            "write_storage_in_revert_state",
+            revert_storage_size,
+            revert_storage_time,
+            revert_storage_pct,
+            revert_storage_rate,
+        );
+        self.print_line(
+            "write_account_in_revert_state",
+            revert_account_size,
+            revert_account_time,
+            revert_account_pct,
+            revert_account_rate,
+        );
+        self.print_line(
+            "write_receipts",
+            write_receipts_size,
+            write_receipts_time,
+            write_receipts_pct,
+            write_receipts_rate,
+        );
+        println!(
+            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$.3}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}{: >COL_WIDTH_LARGE$.3}",
+            "sort_in_state_changes",  
+            "NAN",   
+            sort_time,
+            sort_pct,
+            "NAN"
+        );
+        self.print_line(
+            "write_account_in_state_changes",
+            state_account_size,
+            state_account_time,
+            state_account_pct,
+            state_account_rate,
+        );
+        self.print_line(
+            "write_bytecode_in_state_changes",
+            state_bytecode_size,
+            state_bytecode_time,
+            state_bytecode_pct,
+            state_bytecode_rate,
+        );
+        self.print_line(
+            "write_storage_in_state_changes",
+            state_storage_size,
+            state_storage_time,
+            state_storage_pct,
+            state_storage_rate,
+        );
+    }
+
+    fn print_line(&self, cat: &str, size: f64, time: f64, percent: f64, rate: f64) {
+        // Cat   Size (MBytes)   Time (s)    Time (%)   Rate (MBytes/s)
+        println!(
+            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$.3}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}{: >COL_WIDTH_LARGE$.3}",
+            cat,
+            size,
+            time,
+            percent * 100.0,
+            rate,
+        );
+    }
+}
+
+#[cfg(any(
+    feature = "enable_write_to_db_measure",
+    feature = "enable_write_to_db_measure",
+    feature = "enable_db_speed_record"
+))]
+fn convert_bytes_to_mega(size: usize) -> f64 {
+    size as f64 / 1024.0 / 1024.0
 }

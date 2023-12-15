@@ -31,6 +31,9 @@ impl StateReverts {
     ) -> Result<(), DatabaseError> {
         // Write storage changes
         tracing::trace!(target: "provider::reverts", "Writing storage changes");
+        #[cfg(feature = "enable_write_to_db_measure")]
+        perf_metrics::start_write_to_db_sub_record();
+
         let mut storages_cursor = tx.cursor_dup_write::<tables::PlainStorageState>()?;
         let mut storage_changeset_cursor = tx.cursor_dup_write::<tables::StorageChangeSet>()?;
         for (block_index, mut storage_changes) in self.0.storage.into_iter().enumerate() {
@@ -67,9 +70,14 @@ impl StateReverts {
                 tracing::trace!(target: "provider::reverts", ?address, ?storage, "Writing storage reverts");
                 for (key, value) in StorageRevertsIter::new(storage, wiped_storage) {
                     storage_changeset_cursor.append_dup(storage_id, StorageEntry { key, value })?;
+                    #[cfg(feature = "enable_write_to_db_measure")]
+                    // sizeof(B256) + sizeof(StorageEntry) = 96
+                    perf_metrics::record_revert_storage_size(96usize);
                 }
             }
         }
+        #[cfg(feature = "enable_write_to_db_measure")]
+        perf_metrics::record_revert_storage_time();
 
         // Write account changes
         tracing::trace!(target: "provider::reverts", "Writing account changes");
@@ -83,8 +91,13 @@ impl StateReverts {
                     block_number,
                     AccountBeforeTx { address, info: info.map(into_reth_acc) },
                 )?;
+                #[cfg(feature = "enable_write_to_db_measure")]
+                // sizeof(Address) + sizeof(AccountBeforeTx) = 124
+                perf_metrics::record_revert_account_size(124usize);
             }
         }
+        #[cfg(feature = "enable_write_to_db_measure")]
+        perf_metrics::record_revert_account_time();
 
         Ok(())
     }

@@ -175,8 +175,8 @@ reth-trie = { path = "crates/trie" }
 # revm-primitives = { version = "2.0", features = ["std"], default-features = false }
 revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "ac63f06" }
 
-revm = { path = "/home/andy/Source/work/revm/crates/revm", version = "6.0", features = ["std", "secp256k1"], default-features = false }
-revm-primitives = { path = "/home/andy/Source/work/revm/crates/primitives", version = "2.0", features = ["std"], default-features = false }
+revm = { path = "/home/andy/Source/work/revm/crates/revm", features = ["std", "secp256k1"], default-features = false }
+revm-primitives = { path = "/home/andy/Source/work/revm/crates/primitives", features = ["std"], default-features = false }
 
 # eth
 alloy-chains = { version = "0.1", feature = ["serde", "rlp", "arbitrary"] }

@@ -119,6 +119,11 @@ enable_execute_measure = [
     "reth-revm/enable_execute_measure",
     "open_performance_dashboard",
     ]
+enable_write_to_db_measure = [
+    "reth-provider/enable_write_to_db_measure", 
+    "perf-metrics/enable_write_to_db_measure",
+    "open_performance_dashboard",
+    ]
 
 [[bench]]
 name = "criterion"

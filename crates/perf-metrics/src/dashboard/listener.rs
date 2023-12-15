@@ -25,6 +25,9 @@ use super::displayer::TpsAndGasRecordDisplayer;
 #[cfg(feature = "enable_execute_measure")]
 use super::displayer::ExecuteTxsDisplayer;
 
+#[cfg(feature = "enable_write_to_db_measure")]
+use super::displayer::WriteToDbDisplayer;
+
 #[derive(Debug)]
 pub struct DashboardListener {
     events_rx: UnboundedReceiver<MetricEvent>,
@@ -46,6 +49,9 @@ pub struct DashboardListener {
 
     #[cfg(feature = "enable_execute_measure")]
     execute_txs_displayer: ExecuteTxsDisplayer,
+
+    #[cfg(feature = "enable_write_to_db_measure")]
+    write_to_db_displayer: WriteToDbDisplayer,
 }
 
 impl DashboardListener {
@@ -71,6 +77,9 @@ impl DashboardListener {
 
             #[cfg(feature = "enable_execute_measure")]
             execute_txs_displayer: ExecuteTxsDisplayer::default(),
+
+            #[cfg(feature = "enable_write_to_db_measure")]
+            write_to_db_displayer: WriteToDbDisplayer::default(),
         }
     }
 
@@ -116,6 +125,11 @@ impl DashboardListener {
             MetricEvent::ExecuteTxsInfo { record } => {
                 self.execute_txs_displayer.record(record);
                 self.execute_txs_displayer.print();
+            }
+            #[cfg(feature = "enable_write_to_db_measure")]
+            MetricEvent::WriteToDbInfo { record } => {
+                self.write_to_db_displayer.record(record);
+                self.write_to_db_displayer.print();
             }
         }
     }

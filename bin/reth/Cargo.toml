@@ -216,6 +216,11 @@ enable_execute_measure = [
     "reth-stages/enable_execute_measure",
     "open_performance_dashboard",
 ]
+enable_write_to_db_measure = [
+    "perf-metrics/enable_write_to_db_measure",
+    "reth-stages/enable_write_to_db_measure",
+    "open_performance_dashboard",
+]
 
 [[bin]]
 name = "reth"
