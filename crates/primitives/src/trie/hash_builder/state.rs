@@ -31,6 +31,9 @@ pub struct HashBuilderState {
 
 impl From<HashBuilderState> for HashBuilder {
     fn from(state: HashBuilderState) -> Self {
+        #[cfg(feature = "enable_state_root_record")]
+        let len = state.stack.len();
+
         Self {
             key: Nibbles::from_nibbles_unchecked(state.key),
             stack: state.stack,
@@ -42,6 +45,11 @@ impl From<HashBuilderState> for HashBuilder {
             updated_branch_nodes: None,
             proof_retainer: None,
             rlp_buf: Vec::with_capacity(32),
+
+            #[cfg(feature = "enable_state_root_record")]
+            tree_nodes: Vec::with_capacity(len),
+            #[cfg(feature = "enable_state_root_record")]
+            storage_root: None,
         }
     }
 }

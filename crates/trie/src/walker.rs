@@ -196,6 +196,9 @@ impl<C: TrieCursor> TrieWalker<C> {
         // hash.
         if !self.can_skip_current_node || nibble != -1 {
             if let Some((updates, key)) = self.trie_updates.as_mut().zip(self.cursor.current()?) {
+                #[cfg(feature = "enable_state_root_record")]
+                perf_metrics::mpt::add_delete_branch_count(1);
+
                 updates.schedule_delete(key);
             }
         }

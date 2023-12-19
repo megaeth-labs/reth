@@ -95,6 +95,44 @@ pub mod execute_inner {
             block_number: recorder().block_number,
             record: recorder().op_record,
         });
+
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            let recorder = recorder();
+
+            let (
+                total_time,
+                block_td_time,
+                block_with_senders_time,
+                execute_and_verify_receipt_time,
+            ) = {
+                #[cfg(feature = "enable_execution_duration_record")]
+                {
+                    let duration_record = recorder.duration_record;
+                    (
+                        duration_record.total,
+                        duration_record.block_td,
+                        duration_record.block_with_senders,
+                        duration_record.execution.total,
+                    )
+                }
+                #[cfg(not(feature = "enable_execution_duration_record"))]
+                (0, 0, 0, 0)
+            };
+
+            recorder.state_root_record.total_time = total_time;
+            recorder.state_root_record.block_td_time = block_td_time;
+            recorder.state_root_record.block_with_senders_time = block_with_senders_time;
+            recorder.state_root_record.execute_and_verify_receipt_time =
+                execute_and_verify_receipt_time;
+
+            let _ = recorder.events_tx.as_mut().expect("No sender").send(
+                MetricEvent::StateRootRecordUpdate {
+                    block_number: recorder.block_number,
+                    record: recorder.state_root_record,
+                },
+            );
+        }
     }
 }
 

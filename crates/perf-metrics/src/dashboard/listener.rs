@@ -9,6 +9,7 @@ use std::{
     feature = "enable_opcode_metrics",
     feature = "enable_cache_record",
     feature = "enable_execution_duration_record",
+    feature = "enable_state_root_record",
 ))]
 use super::commons::*;
 
@@ -54,6 +55,10 @@ impl DashboardListener {
             #[cfg(feature = "enable_cache_record")]
             MetricEvent::CacheDbInfo { block_number, size, record } => {
                 super::cache::print_state_size(block_number, size);
+                record.print(block_number);
+            }
+            #[cfg(feature = "enable_state_root_record")]
+            MetricEvent::StateRootRecordUpdate { block_number, record } => {
                 record.print(block_number);
             }
         }

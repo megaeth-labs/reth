@@ -70,3 +70,6 @@ enable_cache_record = []
 enable_execution_duration_record = [
   "perf-metrics/enable_execution_duration_record"
 ]
+enable_state_root_record = [
+    "perf-metrics/enable_state_root_record",
+]

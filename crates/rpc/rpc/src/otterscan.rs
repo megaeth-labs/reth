@@ -131,12 +131,12 @@ where
         if tx_len != receipts.len() {
             return Err(internal_rpc_err(
                 "the number of transactions does not match the number of receipts",
-            ));
+            ))
         }
 
         // make sure the block is full
         let BlockTransactions::Full(transactions) = &mut block.inner.transactions else {
-            return Err(internal_rpc_err("block is not full"));
+            return Err(internal_rpc_err("block is not full"))
         };
 
         // Crop page

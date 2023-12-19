@@ -356,18 +356,19 @@ dependencies = [
 [[package]]
 name = "alloy-trie"
 version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6b9e1498416f7e7f09af8061970e14936846b6271e153aa5ba539a22a7eb414d"
+source = "git+https://github.com/megaeth-labs/trie.git?branch=live-sync-v0.1.0-alpha.3#e2b28f4835f98f747dc2ce49d09ce2798cc0857c"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "arbitrary",
+ "ctor 0.2.7",
  "derive_arbitrary",
  "derive_more",
  "hashbrown 0.14.3",
  "nybbles",
  "proptest",
  "proptest-derive",
+ "revm-utils 0.1.0 (git+https://github.com/megaeth-labs/revm?branch=andy/dev/new-perf)",
  "serde",
  "smallvec",
  "tracing",
@@ -4696,10 +4697,11 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 name = "perf-metrics"
 version = "0.1.0"
 dependencies = [
+ "alloy-trie",
  "ctor 0.2.7",
  "minstant",
  "revm",
- "revm-utils",
+ "revm-utils 0.1.0 (git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34)",
  "tokio",
 ]
 
@@ -5517,7 +5519,7 @@ dependencies = [
  "reth-transaction-pool",
  "reth-trie",
  "revm",
- "revm-utils",
+ "revm-utils 0.1.0 (git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34)",
  "serde",
  "serde_json",
  "similar-asserts",
@@ -6346,6 +6348,7 @@ dependencies = [
  "modular-bitfield",
  "nybbles",
  "once_cell",
+ "perf-metrics",
  "plain_hasher",
  "pprof",
  "proptest",
@@ -6775,6 +6778,7 @@ dependencies = [
  "derive_more",
  "metrics",
  "once_cell",
+ "perf-metrics",
  "proptest",
  "reth-db",
  "reth-interfaces",
@@ -6826,7 +6830,7 @@ dependencies = [
  "hashbrown 0.14.3",
  "revm-interpreter",
  "revm-precompile",
- "revm-utils",
+ "revm-utils 0.1.0 (git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34)",
  "serde",
  "serde_json",
 ]
@@ -6855,7 +6859,7 @@ version = "3.4.0"
 source = "git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34#4a33e08d835b5166672f773064e17b589602a25a"
 dependencies = [
  "revm-primitives",
- "revm-utils",
+ "revm-utils 0.1.0 (git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34)",
  "serde",
 ]
 
@@ -6892,8 +6896,20 @@ dependencies = [
  "hashbrown 0.14.3",
  "hex",
  "once_cell",
- "revm-utils",
+ "revm-utils 0.1.0 (git+https://github.com/megaeth-labs/revm.git?branch=rebase-v34)",
  "serde",
+]
+
+[[package]]
+name = "revm-utils"
+version = "0.1.0"
+source = "git+https://github.com/megaeth-labs/revm?branch=andy/dev/new-perf#5f4d7d9077d488f58c7c98be80887150c923d7ad"
+dependencies = [
+ "allocator-api2",
+ "ctor 0.2.7",
+ "serde",
+ "serde_arrays",
+ "serde_json",
 ]
 
 [[package]]

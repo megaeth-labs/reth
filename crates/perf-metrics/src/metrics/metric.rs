@@ -3,6 +3,8 @@
 // pub use super::duration::ExecuteTxsRecord;
 #[cfg(feature = "enable_execution_duration_record")]
 use super::duration::ExecutionDurationRecord;
+#[cfg(feature = "enable_state_root_record")]
+use super::state_root::StateRootRecord;
 #[cfg(feature = "enable_tps_gas_record")]
 pub use super::tps_gas::TpsAndGasMessage;
 #[cfg(feature = "enable_tps_gas_record")]
@@ -18,6 +20,8 @@ pub use super::execute_measure::execute_inner::*;
 pub use super::execute_measure::revm_measure::*;
 #[cfg(feature = "enable_execution_duration_record")]
 pub use super::execute_measure::{execute_txs::*, write_to_db::*};
+#[cfg(feature = "enable_state_root_record")]
+pub use super::merkle_measure::*;
 
 /// Alias type for metric producers to use.
 pub type MetricEventsSender = UnboundedSender<MetricEvent>;
@@ -25,7 +29,7 @@ pub type MetricEventsSender = UnboundedSender<MetricEvent>;
 /// Collection of metric events.
 #[derive(Clone, Copy, Debug)]
 pub enum MetricEvent {
-    /// Duration record of function execute_inner.
+    /// Duration record of function .
     #[cfg(feature = "enable_execution_duration_record")]
     ExecutionStageTime {
         /// Current block_number.
@@ -59,6 +63,13 @@ pub enum MetricEvent {
         /// cache db record.
         record: CacheDbRecord,
     },
+    #[cfg(feature = "enable_state_root_record")]
+    StateRootRecordUpdate {
+        /// Current block_number.
+        block_number: u64,
+
+        record: StateRootRecord,
+    },
 }
 
 /// This structure is used to facilitate all metric operations in reth's performance test.
@@ -76,6 +87,10 @@ pub struct PerfMetric {
     /// Record information on instruction execution.
     #[cfg(feature = "enable_opcode_metrics")]
     pub(crate) op_record: OpcodeRecord,
+    ///
+
+    #[cfg(feature = "enable_state_root_record")]
+    pub(crate) state_root_record: StateRootRecord,
 
     /// A channel for sending recorded indicator information to the dashboard for display.
     pub(crate) events_tx: Option<MetricEventsSender>,

@@ -109,7 +109,7 @@ jsonrpsee.workspace = true
 assert_matches = "1.5.0"
 
 [features]
-default = ["jemalloc"]
+default = ["jemalloc","enable_state_root_record"]
 
 asm-keccak = ["reth-primitives/asm-keccak"]
 
@@ -168,6 +168,15 @@ enable_execution_duration_record = [
     "reth-stages/enable_execution_duration_record",
     "reth-revm/enable_execution_duration_record",
     "open_performance_dashboard",
+]
+
+enable_state_root_record = [
+    "perf-metrics/enable_state_root_record",
+    "reth-stages/enable_state_root_record",
+    "open_performance_dashboard",
+    "reth-primitives/enable_state_root_record",
+    "reth-trie/enable_state_root_record",
+    "reth-provider/enable_state_root_record",
 ]
 
 [[bin]]

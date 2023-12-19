@@ -168,6 +168,11 @@ impl HashedPostState {
     /// The prefix sets contain the hashed account and storage keys that have been changed in the
     /// post state.
     pub fn construct_prefix_sets(&self) -> TriePrefixSets {
+        #[cfg(feature = "enable_state_root_record")]
+        let _add_construct_prefix_sets_time = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::common::add_construct_prefix_sets_time,
+        );
+
         // Populate account prefix set.
         let mut account_prefix_set = PrefixSetMut::with_capacity(self.accounts.len());
         let mut destroyed_accounts = HashSet::default();

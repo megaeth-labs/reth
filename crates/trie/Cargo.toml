@@ -37,6 +37,8 @@ metrics = { workspace = true, optional = true }
 # `test-utils` feature
 triehash = { version = "0.8", optional = true }
 
+perf-metrics = { workspace = true, optional = true }
+
 [dev-dependencies]
 # reth
 reth-primitives = { workspace = true, features = ["test-utils", "arbitrary"] }
@@ -58,6 +60,8 @@ criterion.workspace = true
 [features]
 metrics = ["reth-metrics", "dep:metrics"]
 test-utils = ["triehash"]
+
+enable_state_root_record = ["perf-metrics"]
 
 [[bench]]
 name = "prefix_set"

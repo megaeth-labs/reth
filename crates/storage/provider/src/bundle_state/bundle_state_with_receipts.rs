@@ -133,6 +133,11 @@ impl BundleStateWithReceipts {
     /// Returns [HashedPostState] for this bundle state.
     /// See [HashedPostState::from_bundle_state] for more info.
     pub fn hash_state_slow(&self) -> HashedPostState {
+        #[cfg(feature = "enable_state_root_record")]
+        let _add_hash_state_slow_time = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::common::add_hash_state_slow_time,
+        );
+
         HashedPostState::from_bundle_state(&self.bundle.state)
     }
 
@@ -306,6 +311,11 @@ impl BundleStateWithReceipts {
     where
         TX: DbTxMut + DbTx,
     {
+        #[cfg(feature = "enable_state_root_record")]
+        let _add_state_write_to_db_time = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::common::add_state_write_to_db_time,
+        );
+
         #[cfg(feature = "enable_execution_duration_record")]
         perf_metrics::start_write_to_db_record();
         let (plain_state, reverts) = self.bundle.into_plain_state_and_reverts(is_value_known);

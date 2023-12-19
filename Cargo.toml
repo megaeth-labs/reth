@@ -259,7 +259,6 @@ alloy-primitives = "0.6"
 alloy-dyn-abi = "0.6"
 alloy-sol-types = "0.6"
 alloy-rlp = "0.3"
-alloy-trie = "0.3"
 alloy-rpc-types = { git = "https://github.com/alloy-rs/alloy", rev = "410850b" }
 alloy-rpc-trace-types = { git = "https://github.com/alloy-rs/alloy", rev = "410850b" }
 alloy-rpc-engine-types = { git = "https://github.com/alloy-rs/alloy", rev = "410850b" }
@@ -359,3 +358,4 @@ test-fuzz = "5"
 ## support perf test
 perf-metrics = { path = "./crates/perf-metrics"}
 revm-utils = { git = "https://github.com/megaeth-labs/revm.git", branch = "rebase-v34" }
+alloy-trie = { git = "https://github.com/megaeth-labs/trie.git", branch = "live-sync-v0.1.0-alpha.3" }

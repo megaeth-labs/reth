@@ -22,6 +22,8 @@ use tracing::{debug, trace};
 
 #[cfg(feature = "metrics")]
 use crate::metrics::{StateRootMetrics, TrieRootMetrics, TrieType};
+#[cfg(feature = "enable_state_root_record")]
+static mut STRORAGE_ROOT_NODE: Option<reth_primitives::trie::TreeNode> = None;
 
 /// StateRoot is used to compute the root node of a state trie.
 #[derive(Debug)]
@@ -180,6 +182,12 @@ where
     ///
     /// The intermediate progress of state root computation and the trie updates.
     pub fn root_with_updates(self) -> Result<(B256, TrieUpdates), StateRootError> {
+        #[cfg(feature = "enable_state_root_record")]
+        perf_metrics::common::add_update_keys(
+            self.prefix_sets.account_prefix_set.len() as u64,
+            self.prefix_sets.storage_prefix_sets.iter().map(|(_, v)| v.len() as u64).sum::<u64>(),
+        );
+
         match self.with_no_threshold().calculate(true)? {
             StateRootProgress::Complete(root, _, updates) => Ok((root, updates)),
             StateRootProgress::Progress(..) => unreachable!(), // unreachable threshold
@@ -210,6 +218,14 @@ where
     }
 
     fn calculate(self, retain_updates: bool) -> Result<StateRootProgress, StateRootError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let (start_timer, _caculate_timer) = (
+            perf_metrics::metrics::Timer::default(),
+            perf_metrics::metrics::TimeRecorder::new(
+                perf_metrics::caculate::add_state_calculate_time,
+            ),
+        );
+
         trace!(target: "trie::state_root", "calculating state root");
         let mut tracker = TrieTracker::default();
         let mut trie_updates = TrieUpdates::default();
@@ -242,13 +258,28 @@ where
 
         let mut account_rlp = Vec::with_capacity(128);
         let mut hashed_entries_walked = 0;
+
+        #[cfg(feature = "enable_state_root_record")]
+        perf_metrics::caculate::add_state_before_loop_time(start_timer.cycles_since());
+
         while let Some(node) = account_node_iter.try_next()? {
             match node {
                 AccountNode::Branch(node) => {
+                    #[cfg(feature = "enable_state_root_record")]
+                    let _add_at_branch_node = perf_metrics::metrics::CountAndTimeRecorder::new(
+                        perf_metrics::caculate::add_state_add_branch,
+                    );
+
                     tracker.inc_branch();
                     hash_builder.add_branch(node.key, node.value, node.children_are_in_trie);
                 }
                 AccountNode::Leaf(hashed_address, account) => {
+                    #[cfg(feature = "enable_state_root_record")]
+                    let _add_state_cal_storage_root_and_add_leaf =
+                        perf_metrics::metrics::TimeRecorder::new(
+                            perf_metrics::caculate::add_state_cal_storage_root_and_add_leaf_time,
+                        );
+
                     tracker.inc_leaf();
                     hashed_entries_walked += 1;
 
@@ -284,10 +315,35 @@ where
                         storage_root_calculator.root()?
                     };
 
+                    #[cfg(feature = "enable_state_root_record")]
+                    let _add_state_after_cal_storage_root =
+                        perf_metrics::metrics::TimeRecorder::new(
+                            perf_metrics::caculate::add_state_after_cal_storage_root_time,
+                        );
+
                     account_rlp.clear();
                     let account = TrieAccount::from((account, storage_root));
                     account.encode(&mut account_rlp as &mut dyn BufMut);
-                    hash_builder.add_leaf(Nibbles::unpack(hashed_address), &account_rlp);
+
+                    {
+                        #[cfg(feature = "enable_state_root_record")]
+                        let _add_state_add_leaf = perf_metrics::metrics::CountAndTimeRecorder::new(
+                            perf_metrics::caculate::add_state_add_leaf,
+                        );
+
+                        hash_builder.add_leaf(Nibbles::unpack(hashed_address), &account_rlp);
+                    }
+
+                    #[cfg(feature = "enable_state_root_record")]
+                    {
+                        if EMPTY_ROOT_HASH == storage_root {
+                            hash_builder.set_storage_root(None);
+                        } else {
+                            unsafe {
+                                hash_builder.set_storage_root(STRORAGE_ROOT_NODE);
+                            }
+                        };
+                    }
 
                     // Decide if we need to return intermediate progress.
                     let total_updates_len = trie_updates.len() +
@@ -316,7 +372,31 @@ where
             }
         }
 
-        let root = hash_builder.root();
+        let root = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _add_state_add_root = perf_metrics::metrics::CountAndTimeRecorder::new(
+                perf_metrics::caculate::add_state_add_root,
+            );
+
+            hash_builder.root()
+        };
+
+        #[cfg(feature = "enable_state_root_record")]
+        let _add_state_after_cal_storage_root = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::caculate::add_state_after_add_root_time,
+        );
+
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            let account_root_node = hash_builder.root_tree_node();
+            perf_metrics::mpt::add_state_mpt_info(account_root_node);
+        }
+
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            let keccak256_record = reth_primitives::trie::metric::get_keccak256_record();
+            perf_metrics::hash::add_keccak256(keccak256_record);
+        }
 
         trie_updates.finalize_state_updates(
             account_node_iter.walker,
@@ -481,6 +561,20 @@ where
         self,
         retain_updates: bool,
     ) -> Result<(B256, usize, TrieUpdates), StorageRootError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let (start_timer, _caculate_timer) = {
+            unsafe {
+                STRORAGE_ROOT_NODE = None;
+            }
+
+            (
+                perf_metrics::metrics::Timer::default(),
+                perf_metrics::metrics::TimeRecorder::new(
+                    perf_metrics::caculate::add_storage_calculate_time,
+                ),
+            )
+        };
+
         trace!(target: "trie::storage_root", hashed_address = ?self.hashed_address, "calculating storage root");
 
         let mut hashed_storage_cursor = self.hashed_cursor_factory.hashed_storage_cursor()?;
@@ -502,13 +596,27 @@ where
 
         let mut storage_node_iter =
             StorageNodeIter::new(walker, hashed_storage_cursor, self.hashed_address);
+
+        #[cfg(feature = "enable_state_root_record")]
+        perf_metrics::caculate::add_storage_before_loop_time(start_timer.cycles_since());
+
         while let Some(node) = storage_node_iter.try_next()? {
             match node {
                 StorageNode::Branch(node) => {
+                    #[cfg(feature = "enable_state_root_record")]
+                    let _add_storage_add_branch = perf_metrics::metrics::CountAndTimeRecorder::new(
+                        perf_metrics::caculate::add_storage_add_branch,
+                    );
+
                     tracker.inc_branch();
                     hash_builder.add_branch(node.key, node.value, node.children_are_in_trie);
                 }
                 StorageNode::Leaf(hashed_slot, value) => {
+                    #[cfg(feature = "enable_state_root_record")]
+                    let _add_storage_add_leaf = perf_metrics::metrics::CountAndTimeRecorder::new(
+                        perf_metrics::caculate::add_storage_add_leaf,
+                    );
+
                     tracker.inc_leaf();
                     hash_builder.add_leaf(
                         Nibbles::unpack(hashed_slot),
@@ -518,7 +626,32 @@ where
             }
         }
 
-        let root = hash_builder.root();
+        let root = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _add_storage_add_root = perf_metrics::metrics::CountAndTimeRecorder::new(
+                perf_metrics::caculate::add_storage_add_root,
+            );
+
+            hash_builder.root()
+        };
+
+        #[cfg(feature = "enable_state_root_record")]
+        let _add_storage_after_add_root = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::caculate::add_storage_after_add_root_time,
+        );
+
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            let storage_root_node = hash_builder.root_tree_node();
+
+            let tmp_node = if EMPTY_ROOT_HASH == root { None } else { Some(storage_root_node) };
+
+            unsafe {
+                STRORAGE_ROOT_NODE = tmp_node;
+            }
+
+            perf_metrics::mpt::add_storage_mpt_info(storage_root_node);
+        }
 
         let mut trie_updates = TrieUpdates::default();
         trie_updates.finalize_storage_updates(

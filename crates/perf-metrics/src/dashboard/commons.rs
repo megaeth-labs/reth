@@ -1,8 +1,14 @@
-#[cfg(any(feature = "enable_opcode_metrics", feature = "enable_cache_record",))]
+#[cfg(any(
+    feature = "enable_opcode_metrics",
+    feature = "enable_cache_record",
+    feature = "enable_state_root_record",
+))]
 use revm_utils::metrics::types::TimeDistributionStats;
 
 /// This trait is used to support the display of metric records.
 pub trait Print {
+    const N: u64 = 1000;
+
     fn print_title(&self) {}
     fn print_content(&self) {}
     fn print(&self, _block_number: u64) {
@@ -13,10 +19,18 @@ pub trait Print {
     }
 }
 
-#[cfg(any(feature = "enable_opcode_metrics", feature = "enable_cache_record",))]
+#[cfg(any(
+    feature = "enable_opcode_metrics",
+    feature = "enable_cache_record",
+    feature = "enable_state_root_record",
+))]
 const COL_WIDTH: usize = 15;
 
-#[cfg(any(feature = "enable_opcode_metrics", feature = "enable_cache_record",))]
+#[cfg(any(
+    feature = "enable_opcode_metrics",
+    feature = "enable_cache_record",
+    feature = "enable_state_root_record",
+))]
 impl Print for TimeDistributionStats {
     fn print_content(&self) {
         let total_cnt: u64 = self.us_percentile.iter().map(|&v| v).sum();
@@ -66,6 +80,7 @@ impl Print for TimeDistributionStats {
     feature = "enable_opcode_metrics",
     feature = "enable_cache_record",
     feature = "enable_execution_duration_record",
+    feature = "enable_state_root_record",
 ))]
 pub(super) fn cycles_as_secs(cycles: u64) -> f64 {
     revm_utils::time_utils::convert_cycles_to_duration(cycles).as_secs_f64()

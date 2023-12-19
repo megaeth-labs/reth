@@ -119,12 +119,20 @@ where
 
         // It's not an exact match, reposition to the first greater or equal account that wasn't
         // cleared.
-        let mut db_entry = self.cursor.seek(key)?;
+        let mut db_entry = {
+            // #[cfg(feature = "enable_state_root_record")]
+            // let _db_seek = perf_metrics::DBSeekRead::default();
+
+            self.cursor.seek(key)?
+        };
         while db_entry
             .as_ref()
             .map(|(address, _)| self.is_account_cleared(address))
             .unwrap_or_default()
         {
+            // #[cfg(feature = "enable_state_root_record")]
+            // let _db_next = perf_metrics::DBNextRead::default();
+
             db_entry = self.cursor.next()?;
         }
 
@@ -154,6 +162,9 @@ where
             .map(|(address, _)| address <= last_account || self.is_account_cleared(address))
             .unwrap_or_default()
         {
+            // #[cfg(feature = "enable_state_root_record")]
+            // let _db_next = perf_metrics::DBNextRead::default();
+
             db_entry = self.cursor.next()?;
         }
 

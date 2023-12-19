@@ -25,3 +25,6 @@ mod subnode;
 pub use subnode::StoredSubNode;
 
 pub use alloy_trie::{BranchNodeCompact, HashBuilder, TrieMask, EMPTY_ROOT_HASH};
+
+#[cfg(feature = "enable_state_root_record")]
+pub use alloy_trie::utils::*;

@@ -29,6 +29,9 @@ use std::{
 };
 use tracing::*;
 
+#[cfg(feature = "enable_state_root_record")]
+use reth_provider::bundle_state::HashedStateChanges;
+
 /// The execution stage executes all transactions and
 /// update history indexes.
 ///
@@ -128,6 +131,7 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         let prune_modes = self.adjust_prune_modes(provider, start_block, max_block)?;
         let static_file_provider = provider.static_file_provider();
 
+        #[cfg(not(feature = "enable_state_root_record"))]
         // We only use static files for Receipts, if there is no receipt pruning of any kind.
         let static_file_producer = if self.prune_modes.receipts.is_none() &&
             self.prune_modes.receipts_log_filter.is_empty()
@@ -212,6 +216,40 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
 
             // Check if we should commit now
             let bundle_size_hint = executor.size_hint().unwrap_or_default() as u64;
+            #[cfg(feature = "enable_state_root_record")]
+            {
+                perf_metrics::common::set_block_number(block_number);
+                perf_metrics::common::add_total_txs_count(block.body.len() as u64);
+
+                let mut state = executor.take_output_state();
+                let hashed_state = state.hash_state_slow();
+                let (_, trie_updates) = hashed_state
+                    .state_root_with_updates(provider.tx_ref())
+                    .map_err(|err| StageError::Fatal(err.into()))?;
+                
+                // We only use static files for Receipts, if there is no receipt pruning of any
+                // kind.
+                let static_file_producer_in = if self.prune_modes.receipts.is_none() &&
+                    self.prune_modes.receipts_log_filter.is_empty()
+                {
+                    Some(prepare_static_file_producer(provider, block_number)?)
+                } else {
+                    None
+                };
+
+                state.set_first_block(block_number);
+                state.write_to_storage(
+                    provider.tx_ref(),
+                    static_file_producer_in,
+                    OriginalValuesKnown::Yes,
+                )?;
+                // insert hashes and intermediate merkle nodes
+                {
+                    HashedStateChanges(hashed_state).write_to_db(provider.tx_ref())?;
+                    trie_updates.flush(provider.tx_ref())?;
+                }
+            }
+
             if self.thresholds.is_end_of_batch(
                 block_number - start_block,
                 bundle_size_hint,
@@ -223,6 +261,7 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             }
         }
         let time = Instant::now();
+        #[cfg(not(feature = "enable_state_root_record"))]
         let state = executor.take_output_state();
         #[cfg(feature = "open_performance_dashboard")]
         perf_metrics::record_after_take_output_state();
@@ -231,6 +270,7 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
 
         let time = Instant::now();
         // write output
+        #[cfg(not(feature = "enable_state_root_record"))]
         state.write_to_storage(
             provider.tx_ref(),
             static_file_producer,

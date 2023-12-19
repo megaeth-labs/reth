@@ -12,6 +12,11 @@ tokio = { workspace = true, features = ["sync"] }
 revm-utils = { workspace = true, optional = true }
 revm = { workspace = true, optional = true }
 
+# ffi = { package = "reth-mdbx-sys", path = "../storage/libmdbx-rs/mdbx-sys" }
+# libc = "0.2"
+
+alloy-trie = { workspace = true, features = ["arbitrary"] }
+
 [features]
 enable_opcode_metrics = [
     "revm-utils",
@@ -21,3 +26,4 @@ enable_execution_duration_record = ["revm-utils",
     "revm/enable_transact_measure",
 ]
 enable_tps_gas_record = ["revm-utils"]
+enable_state_root_record = ["revm-utils", "alloy-trie/enable_state_root_record"]
