@@ -112,6 +112,9 @@ where
         // database.
         if let Some((address, account)) = post_state_entry {
             if address == &key {
+                #[cfg(feature = "enable_state_root_record")]
+                perf_metrics::add_db_hash_account_cursor_seek_hit_count(1 as u64);
+
                 self.last_account = Some(*address);
                 return Ok(Some((*address, *account)))
             }
@@ -119,12 +122,20 @@ where
 
         // It's not an exact match, reposition to the first greater or equal account that wasn't
         // cleared.
-        let mut db_entry = self.cursor.seek(key)?;
+        let mut db_entry = {
+            // #[cfg(feature = "enable_state_root_record")]
+            // let _db_seek = perf_metrics::DBSeekRead::default();
+
+            self.cursor.seek(key)?
+        };
         while db_entry
             .as_ref()
             .map(|(address, _)| self.is_account_cleared(address))
             .unwrap_or_default()
         {
+            // #[cfg(feature = "enable_state_root_record")]
+            // let _db_next = perf_metrics::DBNextRead::default();
+
             db_entry = self.cursor.next()?;
         }
 
@@ -154,6 +165,9 @@ where
             .map(|(address, _)| address <= last_account || self.is_account_cleared(address))
             .unwrap_or_default()
         {
+            // #[cfg(feature = "enable_state_root_record")]
+            // let _db_next = perf_metrics::DBNextRead::default();
+
             db_entry = self.cursor.next()?;
         }
 
@@ -287,6 +301,9 @@ where
         // the database.
         if let Some((slot, value)) = post_state_entry {
             if slot == &subkey {
+                #[cfg(feature = "enable_state_root_record")]
+                perf_metrics::add_db_hash_storage_cursor_seek_hit_count(1 as u64);
+
                 self.last_slot = Some(*slot);
                 return Ok(Some(StorageEntry { key: *slot, value: *value }))
             }

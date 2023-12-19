@@ -106,6 +106,9 @@ impl TrieUpdates {
 
     /// Flush updates all aggregated updates to the database.
     pub fn flush(self, tx: &(impl DbTx + DbTxMut)) -> Result<(), reth_db::DatabaseError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _recoder = perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::Flush);
+
         if self.trie_operations.is_empty() {
             return Ok(())
         }
