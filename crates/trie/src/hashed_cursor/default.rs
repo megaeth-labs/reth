@@ -24,10 +24,16 @@ where
     C: DbCursorRO<tables::HashedAccount>,
 {
     fn seek(&mut self, key: B256) -> Result<Option<(B256, Account)>, reth_db::DatabaseError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _db_seek = perf_metrics::DBSeekRead::default();
+
         self.seek(key)
     }
 
     fn next(&mut self) -> Result<Option<(B256, Account)>, reth_db::DatabaseError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _db_next = perf_metrics::DBNextRead::default();
+
         self.next()
     }
 }
@@ -37,7 +43,14 @@ where
     C: DbCursorRO<tables::HashedStorage> + DbDupCursorRO<tables::HashedStorage>,
 {
     fn is_storage_empty(&mut self, key: B256) -> Result<bool, reth_db::DatabaseError> {
-        Ok(self.seek_exact(key)?.is_none())
+        let db_entry = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _db_seek_exact = perf_metrics::DBSeekExactRead::default();
+
+            self.seek_exact(key)?
+        };
+
+        Ok(db_entry.is_none())
     }
 
     fn seek(
@@ -45,10 +58,16 @@ where
         key: B256,
         subkey: B256,
     ) -> Result<Option<StorageEntry>, reth_db::DatabaseError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _db_seek_by_key_subkey = perf_metrics::DBSeekBySubKeyRead::default();
+
         self.seek_by_key_subkey(key, subkey)
     }
 
     fn next(&mut self) -> Result<Option<StorageEntry>, reth_db::DatabaseError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _db_next_dup_val = perf_metrics::DBNextDupValRead::default();
+
         self.next_dup_val()
     }
 }

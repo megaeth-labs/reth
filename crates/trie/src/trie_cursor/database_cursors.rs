@@ -48,7 +48,14 @@ where
         &mut self,
         key: Nibbles,
     ) -> Result<Option<(Nibbles, BranchNodeCompact)>, DatabaseError> {
-        Ok(self.0.seek_exact(StoredNibbles(key))?.map(|value| (value.0 .0, value.1 .0)))
+        let seek_exact = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _walker_seek_exact = perf_metrics::DBAccountTrieSeekExactRead::default();
+
+            self.0.seek_exact(StoredNibbles(key))?
+        };
+
+        Ok(seek_exact.map(|value| (value.0 .0, value.1 .0)))
     }
 
     /// Seeks a key in the account trie that matches or is greater than the provided key.
@@ -56,12 +63,26 @@ where
         &mut self,
         key: Nibbles,
     ) -> Result<Option<(Nibbles, BranchNodeCompact)>, DatabaseError> {
-        Ok(self.0.seek(StoredNibbles(key))?.map(|value| (value.0 .0, value.1 .0)))
+        let seek = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _walker_seek = perf_metrics::DBAccountTrieSeekRead::default();
+
+            self.0.seek(StoredNibbles(key))?
+        };
+
+        Ok(seek.map(|value| (value.0 .0, value.1 .0)))
     }
 
     /// Retrieves the current key in the cursor.
     fn current(&mut self) -> Result<Option<TrieKey>, DatabaseError> {
-        Ok(self.0.current()?.map(|(k, _)| TrieKey::AccountNode(k)))
+        let current = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _walker_current = perf_metrics::DBAccountTrieCurrentRead::default();
+
+            self.0.current()?
+        };
+
+        Ok(current.map(|(k, _)| TrieKey::AccountNode(k)))
     }
 }
 
@@ -90,9 +111,14 @@ where
         &mut self,
         key: Nibbles,
     ) -> Result<Option<(Nibbles, BranchNodeCompact)>, DatabaseError> {
-        Ok(self
-            .cursor
-            .seek_by_key_subkey(self.hashed_address, StoredNibblesSubKey(key.clone()))?
+        let seek_by_key_subkey = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _seek_by_key_subkey = perf_metrics::DBStorageTrieSeekBySubKeyRead::default();
+
+            self.cursor.seek_by_key_subkey(self.hashed_address, StoredNibblesSubKey(key.clone()))?
+        };
+
+        Ok(seek_by_key_subkey
             .filter(|e| e.nibbles == StoredNibblesSubKey(key))
             .map(|value| (value.nibbles.0, value.node)))
     }
@@ -102,15 +128,26 @@ where
         &mut self,
         key: Nibbles,
     ) -> Result<Option<(Nibbles, BranchNodeCompact)>, DatabaseError> {
-        Ok(self
-            .cursor
-            .seek_by_key_subkey(self.hashed_address, StoredNibblesSubKey(key))?
-            .map(|value| (value.nibbles.0, value.node)))
+        let seek_by_key_subkey = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _seek_by_key_subkey = perf_metrics::DBStorageTrieSeekBySubKeyRead::default();
+
+            self.cursor.seek_by_key_subkey(self.hashed_address, StoredNibblesSubKey(key))?
+        };
+
+        Ok(seek_by_key_subkey.map(|value| (value.nibbles.0, value.node)))
     }
 
     /// Retrieves the current value in the storage trie cursor.
     fn current(&mut self) -> Result<Option<TrieKey>, DatabaseError> {
-        Ok(self.cursor.current()?.map(|(k, v)| TrieKey::StorageNode(k, v.nibbles)))
+        let current = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _current = perf_metrics::DBStorageTrieCurrentRead::default();
+
+            self.cursor.current()?
+        };
+
+        Ok(current.map(|(k, v)| TrieKey::StorageNode(k, v.nibbles)))
     }
 }
 
