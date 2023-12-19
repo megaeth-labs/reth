@@ -110,6 +110,10 @@ enable_tps_gas_record = [
     "perf-metrics/enable_tps_gas_record",  
     "open_performance_dashboard",
     ]
+enable_state_root_record = [
+    "perf-metrics/enable_state_root_record",
+    "open_performance_dashboard",
+]
 
 [[bench]]
 name = "criterion"

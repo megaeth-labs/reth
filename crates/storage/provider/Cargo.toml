@@ -47,8 +47,8 @@ alloy-rlp = { workspace = true, optional = true }
 # parallel utils
 rayon.workspace = true
 
-# perf-test
-perf-metrics.workspace = true
+perf-metrics = { workspace = true, optional = true }
+
 
 [dev-dependencies]
 reth-db = { workspace = true, features = ["test-utils"] }
@@ -68,4 +68,7 @@ optimism = ["reth-primitives/optimism", "reth-interfaces/optimism"]
 enable_cache_record = []
 enable_execution_duration_record = [
   "perf-metrics/enable_execution_duration_record"
+]
+enable_state_root_record = [
+    "perf-metrics/enable_state_root_record",
 ]

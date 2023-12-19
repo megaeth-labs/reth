@@ -66,6 +66,7 @@ impl Print for TimeDistributionStats {
     feature = "enable_opcode_metrics",
     feature = "enable_cache_record",
     feature = "enable_execution_duration_record",
+    feature = "enable_state_root_record",
 ))]
 pub(super) fn cycles_as_secs(cycles: u64) -> f64 {
     revm_utils::time_utils::convert_cycles_to_duration(cycles).as_secs_f64()

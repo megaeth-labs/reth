@@ -95,6 +95,13 @@ pub mod execute_inner {
             block_number: recorder().block_number,
             record: recorder().op_record,
         });
+
+        #[cfg(feature = "enable_state_root_record")]
+        let _ = recorder()
+            .events_tx
+            .as_mut()
+            .expect("No sender")
+            .send(MetricEvent::StateRootUpdatePrint {});
     }
 }
 

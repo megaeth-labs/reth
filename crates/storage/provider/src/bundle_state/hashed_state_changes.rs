@@ -15,6 +15,14 @@ pub struct HashedStateChanges(pub HashedPostState);
 impl HashedStateChanges {
     /// Write the bundle state to the database.
     pub fn write_to_db<TX: DbTxMut + DbTx>(self, tx: &TX) -> Result<(), DatabaseError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _recoder = perf_metrics::TimeRecorder2::new(perf_metrics::FunctionName::HashedState);
+
+        #[cfg(feature = "enable_state_root_record")]
+        let _add_hashed_state_write_time = perf_metrics::state_root::recorder::TimeRecorder::new(
+            perf_metrics::metrics::metric::state_root::common::add_hashed_state_write_time,
+        );
+
         // Write hashed account updates.
         let sorted_accounts = self.0.accounts.into_iter().sorted_unstable_by_key(|(key, _)| *key);
         let mut hashed_accounts_cursor = tx.cursor_write::<tables::HashedAccount>()?;

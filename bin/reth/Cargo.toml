@@ -206,6 +206,15 @@ enable_execution_duration_record = [
     "open_performance_dashboard",
 ]
 
+enable_state_root_record = [
+    "perf-metrics/enable_state_root_record",
+    "reth-stages/enable_state_root_record",
+    "open_performance_dashboard",
+    "reth-primitives/enable_state_root_record",
+    "reth-trie/enable_state_root_record",
+    "reth-provider/enable_state_root_record",
+]
+
 [[bin]]
 name = "reth"
 path = "src/main.rs"
