@@ -42,8 +42,8 @@ alloy-rlp = { workspace = true, optional = true }
 # parallel utils
 rayon.workspace = true
 
-# perf-test
-perf-metrics.workspace = true
+perf-metrics = { workspace = true, optional = true }
+
 
 [dev-dependencies]
 reth-db = { workspace = true, features = ["test-utils"] }
@@ -69,4 +69,7 @@ enable_db_speed_record = [
 ]
 enable_write_to_db_measure = [
   "perf-metrics/enable_write_to_db_measure"
+]
+enable_state_root_record = [
+    "perf-metrics/enable_state_root_record",
 ]

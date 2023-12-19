@@ -103,6 +103,9 @@ impl TrieUpdates {
 
     /// Flush updates all aggregated updates to the database.
     pub fn flush(self, tx: &(impl DbTx + DbTxMut)) -> Result<(), reth_db::DatabaseError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _recoder = perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::Flush);
+
         if self.trie_operations.is_empty() {
             return Ok(())
         }
@@ -136,13 +139,15 @@ impl TrieUpdates {
                 },
                 TrieKey::StorageNode(hashed_address, nibbles) => {
                     if !nibbles.is_empty() {
-                        // Delete the old entry if it exists.
-                        if storage_trie_cursor
-                            .seek_by_key_subkey(hashed_address, nibbles.clone())?
-                            .filter(|e| e.nibbles == nibbles)
-                            .is_some()
                         {
-                            storage_trie_cursor.delete_current()?;
+                            // Delete the old entry if it exists.
+                            if storage_trie_cursor
+                                .seek_by_key_subkey(hashed_address, nibbles.clone())?
+                                .filter(|e| e.nibbles == nibbles)
+                                .is_some()
+                            {
+                                storage_trie_cursor.delete_current()?;
+                            }
                         }
 
                         // The operation is an update, insert new entry.

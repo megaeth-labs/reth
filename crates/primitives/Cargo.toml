@@ -59,6 +59,8 @@ proptest = { workspace = true, optional = true }
 proptest-derive = { workspace = true, optional = true }
 strum = { workspace = true, features = ["derive"] }
 
+perf-metrics = { workspace = true, optional = true }
+
 [dev-dependencies]
 arbitrary = { workspace = true, features = ["derive"] }
 assert_matches.workspace = true
@@ -99,6 +101,8 @@ optimism = [
     "revm/optimism",
 ]
 test-utils = ["dep:plain_hasher", "dep:hash-db", "dep:ethers-core"]
+
+enable_state_root_record = ["perf-metrics"]
 
 [[bench]]
 name = "recover_ecdsa_crit"

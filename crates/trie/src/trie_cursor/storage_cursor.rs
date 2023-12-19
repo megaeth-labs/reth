@@ -34,9 +34,14 @@ where
         &mut self,
         key: Self::Key,
     ) -> Result<Option<(Vec<u8>, BranchNodeCompact)>, DatabaseError> {
-        Ok(self
-            .cursor
-            .seek_by_key_subkey(self.hashed_address, key.clone())?
+        let seek_by_key_subkey = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _seek_by_key_subkey = perf_metrics::DBWalkerSeekExactRead::default();
+
+            self.cursor.seek_by_key_subkey(self.hashed_address, key.clone())
+        };
+
+        Ok(seek_by_key_subkey?
             .filter(|e| e.nibbles == key)
             .map(|value| (value.nibbles.to_vec(), value.node)))
     }
@@ -45,14 +50,24 @@ where
         &mut self,
         key: Self::Key,
     ) -> Result<Option<(Vec<u8>, BranchNodeCompact)>, DatabaseError> {
-        Ok(self
-            .cursor
-            .seek_by_key_subkey(self.hashed_address, key)?
-            .map(|value| (value.nibbles.to_vec(), value.node)))
+        let seek_by_key_subkey = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _seek_by_key_subkey = perf_metrics::DBWalkerSeekRead::default();
+
+            self.cursor.seek_by_key_subkey(self.hashed_address, key)
+        };
+
+        Ok(seek_by_key_subkey?.map(|value| (value.nibbles.to_vec(), value.node)))
     }
 
     fn current(&mut self) -> Result<Option<TrieKey>, DatabaseError> {
-        Ok(self.cursor.current()?.map(|(k, v)| TrieKey::StorageNode(k, v.nibbles)))
+        let current = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _seek_by_key_subkey = perf_metrics::DBWalkerCurrentRead::default();
+
+            self.cursor.current()
+        };
+        Ok(current?.map(|(k, v)| TrieKey::StorageNode(k, v.nibbles)))
     }
 }
 

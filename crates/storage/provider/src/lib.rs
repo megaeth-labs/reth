@@ -46,4 +46,6 @@ pub mod chain;
 pub use chain::{Chain, DisplayBlocksChain};
 
 pub mod bundle_state;
-pub use bundle_state::{BundleStateWithReceipts, OriginalValuesKnown, StateChanges, StateReverts};
+pub use bundle_state::{
+    BundleStateWithReceipts, HashedStateChanges, OriginalValuesKnown, StateChanges, StateReverts,
+};

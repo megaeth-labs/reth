@@ -20,6 +20,18 @@ fn rlp_node(rlp: &[u8]) -> Vec<u8> {
     if rlp.len() < B256::len_bytes() {
         rlp.to_vec()
     } else {
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            let result = {
+                // let _ = perf_metrics::Keccak256Recorder::new();
+                let _recorder =
+                    perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::Keccak256);
+                &keccak256(rlp)
+            };
+            word_rlp(result)
+        }
+
+        #[cfg(not(feature = "enable_state_root_record"))]
         word_rlp(&keccak256(rlp))
     }
 }

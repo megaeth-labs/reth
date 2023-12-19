@@ -15,6 +15,9 @@ pub struct HashedStateChanges(pub HashedPostState);
 impl HashedStateChanges {
     /// Write the bundle state to the database.
     pub fn write_to_db<TX: DbTxMut + DbTx>(self, tx: &TX) -> Result<(), DatabaseError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _recoder = perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::HashedState);
+
         // Collect hashed account changes.
         let mut hashed_accounts = BTreeMap::<B256, Option<Account>>::default();
         for (hashed_address, account) in self.0.accounts() {

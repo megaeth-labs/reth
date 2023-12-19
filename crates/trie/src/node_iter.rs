@@ -82,11 +82,21 @@ where
     ///
     /// NOTE: The iteration will start from the key of the previous hashed entry if it was supplied.
     pub(crate) fn try_next(&mut self) -> Result<Option<AccountNode>, StateRootError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _try_next_stat_record = perf_metrics::StateTryNextStatRecord::default();
+
+        #[cfg(feature = "enable_state_root_record")]
+        let _time_try_next =
+            perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::StateTryNext);
+
         loop {
             if let Some(key) = self.walker.key() {
                 if !self.current_walker_key_checked && self.previous_account_key.is_none() {
                     self.current_walker_key_checked = true;
                     if self.walker.can_skip_current_node {
+                        #[cfg(feature = "enable_state_root_record")]
+                        perf_metrics::add_state_try_next_stat_skip_branch_node_count(1);
+
                         return Ok(Some(AccountNode::Branch(TrieBranchNode::new(
                             key,
                             self.walker.hash().unwrap(),
@@ -98,9 +108,15 @@ where
 
             if let Some((hashed_address, account)) = self.current_hashed_entry.take() {
                 if self.walker.key().map_or(false, |key| key < Nibbles::unpack(hashed_address)) {
+                    #[cfg(feature = "enable_state_root_record")]
+                    perf_metrics::add_state_try_next_stat_leaf_miss_count(1);
+
                     self.current_walker_key_checked = false;
                     continue
                 }
+
+                #[cfg(feature = "enable_state_root_record")]
+                perf_metrics::add_state_try_next_stat_leaf_hit_count(1);
 
                 self.current_hashed_entry = self.hashed_account_cursor.next()?;
                 return Ok(Some(AccountNode::Leaf(hashed_address, account)))
@@ -172,11 +188,21 @@ where
     /// 4. Return every hashed storage entry up to the key of the current intermediate branch node.
     /// 5. Repeat.
     pub(crate) fn try_next(&mut self) -> Result<Option<StorageNode>, StorageRootError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _try_next_stat_record = perf_metrics::StorageTryNextStatRecord::default();
+
+        #[cfg(feature = "enable_state_root_record")]
+        let _time_try_next =
+            perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::StorageTryNext);
+
         loop {
             if let Some(key) = self.walker.key() {
                 if !self.current_walker_key_checked {
                     self.current_walker_key_checked = true;
                     if self.walker.can_skip_current_node {
+                        #[cfg(feature = "enable_state_root_record")]
+                        perf_metrics::add_storage_try_next_stat_skip_branch_node_count(1);
+
                         return Ok(Some(StorageNode::Branch(TrieBranchNode::new(
                             key,
                             self.walker.hash().unwrap(),
@@ -189,9 +215,15 @@ where
             if let Some(StorageEntry { key: hashed_key, value }) = self.current_hashed_entry.take()
             {
                 if self.walker.key().map_or(false, |key| key < Nibbles::unpack(hashed_key)) {
+                    #[cfg(feature = "enable_state_root_record")]
+                    perf_metrics::add_storage_try_next_stat_leaf_miss_count(1);
+
                     self.current_walker_key_checked = false;
                     continue
                 }
+
+                #[cfg(feature = "enable_state_root_record")]
+                perf_metrics::add_storage_try_next_stat_leaf_hit_count(1);
 
                 self.current_hashed_entry = self.hashed_storage_cursor.next()?;
                 return Ok(Some(StorageNode::Leaf(hashed_key, value)))

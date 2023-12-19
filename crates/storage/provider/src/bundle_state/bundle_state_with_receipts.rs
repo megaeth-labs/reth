@@ -128,6 +128,9 @@ impl BundleStateWithReceipts {
     ///
     /// The hashed post state.
     pub fn hash_state_slow(&self) -> HashedPostState {
+        #[cfg(feature = "enable_state_root_record")]
+        let _recoder = perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::HashedStateSlow);
+
         let mut hashed_state = HashedPostState::default();
 
         for (address, account) in self.bundle.state() {
@@ -160,6 +163,10 @@ impl BundleStateWithReceipts {
         tx: &'a TX,
         hashed_post_state: &'b HashedPostState,
     ) -> StateRoot<'a, TX, HashedPostStateCursorFactory<'a, 'b, TX>> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _recoder =
+            perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::StateRootCalculator);
+
         let (account_prefix_set, storage_prefix_set) = hashed_post_state.construct_prefix_sets();
         let hashed_cursor_factory = HashedPostStateCursorFactory::new(tx, hashed_post_state);
         StateRoot::new(tx)

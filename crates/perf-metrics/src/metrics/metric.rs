@@ -10,6 +10,8 @@ use super::speed::DatabaseOperationRecord;
 use super::tps_gas::TpsGasRecord;
 #[cfg(feature = "enable_write_to_db_measure")]
 use super::write_to_db::WriteToDbRecord;
+#[cfg(feature = "enable_state_root_record")]
+use crate::{StateRootUpdateRecord, TreeNode};
 #[cfg(feature = "enable_cache_record")]
 use revm_utils::metrics::types::CacheDbRecord;
 #[cfg(feature = "enable_opcode_metrics")]
@@ -78,6 +80,10 @@ pub enum MetricEvent {
         /// write_to_db record.
         record: WriteToDbRecord,
     },
+    #[cfg(feature = "enable_state_root_record")]
+    StateRootUpdate { record: StateRootUpdateRecord },
+    #[cfg(feature = "enable_state_root_record")]
+    StateRootUpdatePrint {},
 }
 
 /// This structure is used to support all metric operations of
@@ -105,6 +111,9 @@ struct ExecutionStageMetric {
     /// Record information on in-depth measurement of function write_to_db.
     #[cfg(feature = "enable_write_to_db_measure")]
     write_to_db_record: WriteToDbRecord,
+    ///
+    #[cfg(feature = "enable_state_root_record")]
+    state_root_update_record: StateRootUpdateRecord,
 
     /// A channel for sending recorded indicator information to the dashboard for display.
     events_tx: Option<MetricEventsSender>,
@@ -238,6 +247,15 @@ pub fn record_after_loop() {
 
         #[cfg(feature = "enable_execution_duration_record")]
         _record.duration_record.start_time_record();
+
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            let _ = _record
+                .events_tx
+                .as_mut()
+                .expect("No sender")
+                .send(MetricEvent::StateRootUpdatePrint {});
+        }
     }
 }
 
@@ -414,7 +432,8 @@ pub fn merge_transactions_record() {
 #[cfg(feature = "enable_execute_measure")]
 pub fn verify_receipt_record() {
     unsafe {
-        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        let _record: &mut ExecutionStageMetric =
+            METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         _record.execute_tx_record.verify_receipt_record();
     }
 }
@@ -785,4 +804,565 @@ pub fn record_state_storage_time() {
 }
 // *************************************************************************************************
 //                              functions called by write_to_db end
+// *************************************************************************************************
+// The functions in the following range is for the feature enable_state_root_record.
+//
+// *************************************************************************************************
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn reset_state_root_update_record(block_number: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record = StateRootUpdateRecord::default();
+        _record.state_root_update_record.set_block_number(block_number);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn set_hashswitch(switch: bool) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.set_hashswitch(switch);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn set_dbswitch(switch: bool) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.set_dbswitch(switch);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn record_changes(account_number: u64, contract_account_number: u64, storage_number: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_account_changes(account_number);
+        _record.state_root_update_record.add_contract_account_changes(contract_account_number);
+        _record.state_root_update_record.add_storage_changes(storage_number);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn record_mpt_updates_to_db(number: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_mpt_updates_to_db(number);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_current(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_current_count(count);
+            _record.state_root_update_record.add_db_current(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_seek(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_seek_count(count);
+            _record.state_root_update_record.add_db_seek(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_next(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_next_count(count);
+            _record.state_root_update_record.add_db_next(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_seek_exact(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_seek_exact_count(count);
+            _record.state_root_update_record.add_db_seek_exact(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_seek_by_sub_key(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_seek_by_sub_key_count(count);
+            _record.state_root_update_record.add_db_seek_by_sub_key(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_next_dup_val(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_next_dup_val_count(count);
+            _record.state_root_update_record.add_db_next_dup_val(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_walker_seek(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_walker_seek_count(count);
+            _record.state_root_update_record.add_db_walker_seek(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_walker_seek_exact(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_walker_seek_exact_count(count);
+            _record.state_root_update_record.add_db_walker_seek_exact(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_walker_current(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_walker_current_count(count);
+            _record.state_root_update_record.add_db_walker_current(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_hash_account_cursor_seek_hit_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_db_hash_account_cursor_seek_hit_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_hash_storage_cursor_seek_hit_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_db_hash_storage_cursor_seek_hit_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_calculate(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_calculate(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_record_calculate(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_record_calculate(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_before_loop(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_before_loop(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_loop_begin(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_loop_begin(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_try_next_stat_total_time(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_try_next_stat_total_count(count);
+        _record.state_root_update_record.add_state_try_next_stat_total_time(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_try_next_stat_skip_branch_node_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_try_next_stat_skip_branch_node_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_try_next_stat_leaf_miss_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_try_next_stat_leaf_miss_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_try_next_stat_leaf_hit_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_try_next_stat_leaf_hit_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_try_next_stat_total_count_time(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_try_next_stat_total_count(count);
+        _record.state_root_update_record.add_storage_try_next_stat_total_time(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_try_next_stat_skip_branch_node_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_try_next_stat_skip_branch_node_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_try_next_stat_leaf_miss_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_try_next_stat_leaf_miss_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_try_next_stat_leaf_hit_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_try_next_stat_leaf_hit_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_try_next(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_try_next(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_try_next(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_try_next(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_add_branch(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_add_branch_count(count);
+        _record.state_root_update_record.add_state_add_branch(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_cal_storage_root_and_add_leaf(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_cal_storage_root_and_add_leaf(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_after_cal_storage_root(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_after_cal_storage_root(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_add_leaf(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_add_leaf_count(count);
+        _record.state_root_update_record.add_state_add_leaf(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_add_root(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_add_root_count(count);
+        _record.state_root_update_record.add_state_add_root(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_add_after_loop(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_add_after_loop(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_calculate(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_calculate(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_record_calculate(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_record_calculate(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_before_loop(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_before_loop(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_loop_begin(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_loop_begin(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_add_branch(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_add_branch_count(count);
+        _record.state_root_update_record.add_storage_add_branch(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_add_leaf(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_add_leaf_count(count);
+        _record.state_root_update_record.add_storage_add_leaf(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_add_root(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_add_root_count(count);
+        _record.state_root_update_record.add_storage_add_root(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_add_after_loop(time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_add_after_loop(time_cycles);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn record_keccak256(time: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_hashswith_set() {
+            _record.state_root_update_record.add_keccak256(time);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_keccak256_execution(count: u64, time: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_hashswith_set() {
+            _record.state_root_update_record.add_keccak256_execution(count, time);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub(crate) fn record_hashed_state(time: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_hashed_state(time);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub(crate) fn record_hashed_state_slow(time: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_hash_state_slow(time);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub(crate) fn record_state_root_calculator(time: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_root_calculator(time);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub(crate) fn record_flush(time: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_flush(time);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn record_total_txs(txs: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_total_txs(txs);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn record_total_keys(total_key: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_total_keys(total_key);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_account_mpt_info(tree_node: TreeNode, delete_branch: u64, update_branch: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_account_mpt_info(
+            tree_node,
+            delete_branch,
+            update_branch,
+        );
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_mpt_add_node_number(number: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_mpt_add_node_number(number);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_mpt_empty_hash_number(number: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_mpt_empty_hash_number(number);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_mpt_not_empty_hash_number(number: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_mpt_not_empty_hash_number(number);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_mpt_delete_branch_number(number: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_mpt_delete_branch_number(number);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_mpt_info(tree_node: TreeNode, delete_branch: u64, update_branch: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_mpt_info(
+            tree_node,
+            delete_branch,
+            update_branch,
+        );
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn send_state_root_update_message() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            let _ =
+                _record.events_tx.as_mut().expect("No sender").send(MetricEvent::StateRootUpdate {
+                    record: _record.state_root_update_record,
+                });
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn send_state_root_update_print_message() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            let _ = _record
+                .events_tx
+                .as_mut()
+                .expect("No sender")
+                .send(MetricEvent::StateRootUpdatePrint {});
+        }
+    }
+}
+
+// *************************************************************************************************
+//                              functions for the feature enable_state_root_record end
 // *************************************************************************************************

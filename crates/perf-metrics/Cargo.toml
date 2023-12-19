@@ -27,3 +27,4 @@ enable_execute_measure = ["revm-utils"]
 enable_write_to_db_measure = ["revm-utils",
     "revm/enable_transact_measure",
 ]
+enable_state_root_record = ["revm-utils"]

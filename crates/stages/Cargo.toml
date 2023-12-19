@@ -119,6 +119,10 @@ enable_write_to_db_measure = [
     "perf-metrics/enable_write_to_db_measure",
     "open_performance_dashboard",
     ]
+enable_state_root_record = [
+    "perf-metrics/enable_state_root_record",
+    "open_performance_dashboard",
+]
 
 [[bench]]
 name = "criterion"

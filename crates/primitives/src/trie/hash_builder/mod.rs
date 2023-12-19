@@ -4,6 +4,8 @@ use super::{
 };
 use crate::{constants::EMPTY_ROOT_HASH, keccak256, Bytes, B256};
 use itertools::Itertools;
+#[cfg(feature = "enable_state_root_record")]
+use perf_metrics::TreeNode;
 use std::{
     collections::{BTreeMap, HashMap},
     fmt::Debug,
@@ -58,10 +60,17 @@ pub struct HashBuilder {
     proof_retainer: Option<ProofRetainer>,
 
     rlp_buf: Vec<u8>,
+
+    #[cfg(feature = "enable_state_root_record")]
+    tree_nodes: Vec<perf_metrics::TreeNode>,
+    #[cfg(feature = "enable_state_root_record")]
+    storage_root: Option<TreeNode>,
 }
 
 impl From<HashBuilderState> for HashBuilder {
     fn from(state: HashBuilderState) -> Self {
+        #[cfg(feature = "enable_state_root_record")]
+        let len = state.stack.len();
         Self {
             key: Nibbles::from_nibbles_unchecked(state.key),
             stack: state.stack,
@@ -73,6 +82,11 @@ impl From<HashBuilderState> for HashBuilder {
             updated_branch_nodes: None,
             proof_retainer: None,
             rlp_buf: Vec::with_capacity(32),
+
+            #[cfg(feature = "enable_state_root_record")]
+            tree_nodes: Vec::with_capacity(len),
+            #[cfg(feature = "enable_state_root_record")]
+            storage_root: None,
         }
     }
 }
@@ -157,6 +171,9 @@ impl HashBuilder {
             self.update(&key);
         } else if key.is_empty() {
             self.stack.push(word_rlp(&value));
+
+            #[cfg(feature = "enable_state_root_record")]
+            self.tree_nodes.push(perf_metrics::TreeNode::new_branch());
         }
         self.set_key_value(key, value);
         self.stored_in_database = stored_in_database;
@@ -173,11 +190,32 @@ impl HashBuilder {
         self.current_root()
     }
 
+    /// return number of nodes and total dept of nodes
+    /// Call root() first
+    #[cfg(feature = "enable_state_root_record")]
+    pub fn root_tree_node(&mut self) -> perf_metrics::TreeNode {
+        if let Some(node) = self.tree_nodes.last() {
+            return node.clone()
+        }
+        perf_metrics::TreeNode::default()
+    }
+
+    /// set storage root of storage trie
+    #[cfg(feature = "enable_state_root_record")]
+    pub fn set_storage_root(&mut self, root: Option<TreeNode>) {
+        self.storage_root = root;
+    }
+
     fn set_key_value<T: Into<HashBuilderValue>>(&mut self, key: Nibbles, value: T) {
         trace!(target: "trie::hash_builder", key = ?self.key, value = ?self.value, "old key/value");
         self.key = key;
         self.value = value.into();
         trace!(target: "trie::hash_builder", key = ?self.key, value = ?self.value, "new key/value");
+
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            self.storage_root = None;
+        }
     }
 
     fn current_root(&self) -> B256 {
@@ -185,6 +223,10 @@ impl HashBuilder {
             if node_ref.len() == B256::len_bytes() + 1 {
                 B256::from_slice(&node_ref[1..])
             } else {
+                #[cfg(feature = "enable_state_root_record")]
+                let _recorder =
+                    perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::Keccak256);
+
                 keccak256(node_ref)
             }
         } else {
@@ -277,11 +319,21 @@ impl HashBuilder {
 
                         self.rlp_buf.clear();
                         self.stack.push(leaf_node.rlp(&mut self.rlp_buf));
+
+                        #[cfg(feature = "enable_state_root_record")]
+                        {
+                            let tmp_node = perf_metrics::TreeNode::new_leaf(self.storage_root);
+                            self.tree_nodes.push(tmp_node);
+                        }
+
                         self.retain_proof_from_buf(&current);
                     }
                     HashBuilderValue::Hash(hash) => {
                         trace!(target: "trie::hash_builder", ?hash, "pushing branch node hash");
                         self.stack.push(word_rlp(hash));
+
+                        #[cfg(feature = "enable_state_root_record")]
+                        self.tree_nodes.push(perf_metrics::TreeNode::new_branch());
 
                         if self.stored_in_database {
                             self.tree_masks[current.len() - 1] |=
@@ -299,6 +351,7 @@ impl HashBuilder {
                 self.update_masks(&current, len_from);
                 let stack_last =
                     self.stack.pop().expect("there should be at least one stack item; qed");
+
                 let extension_node = ExtensionNode::new(&short_node_key, &stack_last);
                 trace!(target: "trie::hash_builder", ?extension_node, "pushing extension node");
                 trace!(target: "trie::hash_builder", rlp = {
@@ -307,6 +360,18 @@ impl HashBuilder {
                 }, "extension node rlp");
                 self.rlp_buf.clear();
                 self.stack.push(extension_node.rlp(&mut self.rlp_buf));
+
+                #[cfg(feature = "enable_state_root_record")]
+                {
+                    perf_metrics::add_mpt_add_node_number(1 as u64);
+
+                    let top_tree_node = self
+                        .tree_nodes
+                        .pop()
+                        .expect("there should be at least one stack item; qed");
+                    self.tree_nodes.push(perf_metrics::TreeNode::new_extension(&top_tree_node));
+                }
+
                 self.retain_proof_from_buf(&current.slice(..len_from));
                 self.resize_masks(len_from);
             }
@@ -373,6 +438,20 @@ impl HashBuilder {
         trace!(target: "trie::hash_builder", "pushing branch node with {:?} mask from stack", state_mask);
         trace!(target: "trie::hash_builder", rlp = crate::hex::encode(&rlp), "branch node rlp");
         self.stack.push(rlp);
+
+        #[cfg(feature = "enable_state_root_record")]
+        {
+            perf_metrics::add_mpt_add_node_number(1 as u64);
+
+            let mut tree_node = perf_metrics::TreeNode::new_branch();
+            for i in first_child_idx..self.tree_nodes.len() {
+                tree_node.add_node(&self.tree_nodes[i]);
+            }
+            self.tree_nodes.resize(first_child_idx, perf_metrics::TreeNode::default());
+
+            self.tree_nodes.push(tree_node);
+        };
+
         children
     }
 

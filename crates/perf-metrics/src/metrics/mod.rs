@@ -11,6 +11,12 @@ mod write_to_db;
 
 pub mod metric;
 
+#[cfg(feature = "enable_state_root_record")]
+pub mod state_root;
+
+#[cfg(feature = "enable_state_root_record")]
+pub mod time_distribution_stats;
+
 #[cfg(feature = "enable_execution_duration_record")]
 pub use duration::ExecutionDurationRecord;
 
@@ -23,5 +29,10 @@ pub use speed::DatabaseOperationRecord;
 #[cfg(feature = "enable_execute_measure")]
 pub use execute_tx::ExecuteTxsRecord;
 
+#[cfg(feature = "enable_state_root_record")]
+pub use state_root::*;
 #[cfg(feature = "enable_write_to_db_measure")]
 pub use write_to_db::WriteToDbRecord;
+
+#[cfg(feature = "enable_state_root_record")]
+pub use time_distribution_stats::*;

@@ -158,7 +158,12 @@ impl<C: TrieCursor> TrieWalker<C> {
         // Delete the current node if it's included in the prefix set or it doesn't contain the root
         // hash.
         if !self.can_skip_current_node || nibble != -1 {
-            if let Some((updates, key)) = self.trie_updates.as_mut().zip(self.cursor.current()?) {
+            if let Some((updates, key)) = self.trie_updates.as_mut().zip({
+                self.cursor.current()?
+            }) {
+                #[cfg(feature = "enable_state_root_record")]
+                perf_metrics::add_mpt_delete_branch_number(1);
+
                 updates.schedule_delete(key);
             }
         }

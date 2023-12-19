@@ -27,6 +27,9 @@ thiserror.workspace = true
 derive_more = "0.99"
 auto_impl = "1"
 
+# metric
+perf-metrics = { workspace = true, optional = true }
+
 # test-utils
 triehash = { version = "0.8", optional = true }
 
@@ -50,6 +53,8 @@ criterion.workspace = true
 
 [features]
 test-utils = ["triehash"]
+
+enable_state_root_record = ["perf-metrics"]
 
 [[bench]]
 name = "prefix_set"

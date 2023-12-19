@@ -24,18 +24,37 @@ where
         &mut self,
         key: Self::Key,
     ) -> Result<Option<(Vec<u8>, BranchNodeCompact)>, DatabaseError> {
-        Ok(self.0.seek_exact(key)?.map(|value| (value.0.to_vec(), value.1)))
+        let seek_exact = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _walker_seek_exact = perf_metrics::DBWalkerSeekExactRead::default();
+
+            self.0.seek_exact(key)
+        };
+        Ok(seek_exact?.map(|value| (value.0.to_vec(), value.1)))
     }
 
     fn seek(
         &mut self,
         key: Self::Key,
     ) -> Result<Option<(Vec<u8>, BranchNodeCompact)>, DatabaseError> {
-        Ok(self.0.seek(key)?.map(|value| (value.0.to_vec(), value.1)))
+        let seek = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _walker_seek_exact = perf_metrics::DBWalkerSeekRead::default();
+
+            self.0.seek(key)
+        };
+        Ok(seek?.map(|value| (value.0.to_vec(), value.1)))
     }
 
     fn current(&mut self) -> Result<Option<TrieKey>, DatabaseError> {
-        Ok(self.0.current()?.map(|(k, _)| TrieKey::AccountNode(k)))
+        let current = {
+            #[cfg(feature = "enable_state_root_record")]
+            let _walker_current = perf_metrics::DBWalkerCurrentRead::default();
+
+            self.0.current()
+        };
+
+        Ok(current?.map(|(k, _)| TrieKey::AccountNode(k)))
     }
 }
 
