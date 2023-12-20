@@ -231,6 +231,12 @@ pub fn record_after_loop() {
 pub fn record_after_take_output_state() {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        #[cfg(feature = "enable_tps_gas_record")]
+        let _ = _record
+            .events_tx
+            .as_mut()
+            .expect("No sender")
+            .send(MetricEvent::BlockTpsAndGasSwitch { switch: false });
 
         #[cfg(feature = "enable_execution_duration_record")]
         {
@@ -257,13 +263,6 @@ pub fn record_at_end(_cachedb_size: usize) {
                 .expect("No sender")
                 .send(MetricEvent::ExecutionStageTime { record: _record.duration_record });
         }
-
-        #[cfg(feature = "enable_tps_gas_record")]
-        let _ = _record
-            .events_tx
-            .as_mut()
-            .expect("No sender")
-            .send(MetricEvent::BlockTpsAndGasSwitch { switch: false });
 
         #[cfg(feature = "enable_db_speed_record")]
         {
