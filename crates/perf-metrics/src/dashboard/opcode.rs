@@ -86,8 +86,8 @@ pub(crate) const MERGE_MAP: [Option<(u8, OpcodeInfo)>; OPCODE_NUMBER] = [
     Some((CHAINID, OpcodeInfo { category: "host_env", gas: 2, static_gas: true })), //0x46
     Some((SELFBALANCE, OpcodeInfo { category: "host", gas: 5, static_gas: true })), //0x47
     Some((BASEFEE, OpcodeInfo { category: "host_env", gas: 2, static_gas: true })), //0x48
-    None,                                                                    //0x49
-    None,                                                                    //0x4a
+    Some((BLOBHASH, OpcodeInfo { category: "host_env", gas: 3, static_gas: true })), //0x49
+    Some((BLOBBASEFEE, OpcodeInfo { category: "host_env", gas: 2, static_gas: true })), //0x4a
     None,                                                                    //0x4b
     None,                                                                    //0x4c
     None,                                                                    //0x4d
@@ -105,9 +105,9 @@ pub(crate) const MERGE_MAP: [Option<(u8, OpcodeInfo)>; OPCODE_NUMBER] = [
     Some((MSIZE, OpcodeInfo { category: "memory", gas: 2, static_gas: true })), //0x59
     Some((GAS, OpcodeInfo { category: "system", gas: 2, static_gas: true })), //0x5a
     Some((JUMPDEST, OpcodeInfo { category: "control", gas: 1, static_gas: true })), //0x5b
-    None,                                                                    //0x5c
-    None,                                                                    //0x5d
-    None,                                                                    //0x5e
+    Some((TLOAD, OpcodeInfo { category: "host", gas: 100, static_gas: true })), //0x5c
+    Some((TSTORE, OpcodeInfo { category: "host", gas: 100, static_gas: true })), //0x5d
+    Some((MCOPY, OpcodeInfo { category: "memory", gas: 100, static_gas: false })), //0x5e
     Some((PUSH0, OpcodeInfo { category: "stack::push", gas: 2, static_gas: true })), //0x5f
     Some((PUSH1, OpcodeInfo { category: "stack::push", gas: 3, static_gas: true })), //0x60
     Some((PUSH2, OpcodeInfo { category: "stack::push", gas: 3, static_gas: true })), //0x61
