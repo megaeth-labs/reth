@@ -61,6 +61,7 @@ pub(crate) struct OpcodeStats {
     ave_cost: [f64; OPCODE_NUMBER],
     opcode_gas: [(f64, f64); OPCODE_NUMBER],
     total_gas: f64,
+    dyn_gas: [f64; OPCODE_NUMBER],
     merge_records: BTreeMap<&'static str, OpcodeMergeRecord>,
     opcode_record: OpcodeRecord,
 }
@@ -75,7 +76,7 @@ impl OpcodeStats {
         println!("\n");
     }
 
-    fn base_gas(&self, opcode: u8) -> Option<u64> {
+    fn static_gas(&self, opcode: u8) -> Option<u64> {
         Some(MERGE_MAP[opcode as usize]?.1.gas)
     }
 
@@ -84,7 +85,7 @@ impl OpcodeStats {
     }
 
     fn print_header(&self) {
-        println!("\n================================================Metric of instruction================================================\n");
+        println!("\n=================================================================Metric of instruction==========================================================\n");
     }
 
     fn print_opcode_line(
@@ -97,12 +98,15 @@ impl OpcodeStats {
         cost: f64,
         total_gas: f64,
         gas_percent: f64,
-        base_gas: u64,
+        static_gas: u64,
+        dyn_gas: f64,
         cat: &str,
     ) {
-        println!(
+        // TODO: This needs to be modified.
+        if dyn_gas < 50.0 {
+            println!(
             "{: <COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$.3}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$.3} \
-            {:>COL_WIDTH_MIDDLE$.1}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}",
+            {:>COL_WIDTH_MIDDLE$.1}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}",
             opcode_jump,
             count,
             count_percent,
@@ -111,15 +115,33 @@ impl OpcodeStats {
             cost,
             total_gas,
             gas_percent,
-            base_gas,
+            static_gas,
+            "",
             cat,
         );
+        } else {
+            println!(
+            "{: <COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$.3}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$.3} \
+            {:>COL_WIDTH_MIDDLE$.1}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$}",
+            opcode_jump,
+            count,
+            count_percent,
+            time,
+            time_percent,
+            cost,
+            total_gas,
+            gas_percent,
+            static_gas,
+            dyn_gas,
+            cat,
+        );
+        }
     }
 
     fn print_opcode(&self) {
         println!(
             "{: <COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$} \
-            {:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}", 
+            {:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}", 
             "Opcode", 
             "Count", 
             "Count (%)", 
@@ -128,14 +150,15 @@ impl OpcodeStats {
             "Cost (ns)", 
             "Total Mgas",
             "Gas (%)",
-            "Base gas",
+            "Static gas",
+            "Dyn. gas",
             "Category"
             );
 
         let avg_cost = convert_cycles_to_ns_f64(self.total_duration) / self.total_count as f64;
         println!(
             "{: <COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$.3}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$.3} \
-            {:>COL_WIDTH_MIDDLE$.1}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}",
+            {:>COL_WIDTH_MIDDLE$.1}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$.2}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}",
             "Overall",
             self.total_count,
             100f64,
@@ -145,6 +168,7 @@ impl OpcodeStats {
             self.total_gas,
             100f64,
             "NAN",
+            "",
             "NAN",
         );
 
@@ -164,7 +188,8 @@ impl OpcodeStats {
                 self.ave_cost[i],
                 self.opcode_gas[i].0,
                 self.opcode_gas[i].1 * 100.0,
-                self.base_gas(op).unwrap_or(0),
+                self.static_gas(op).unwrap_or(0),
+                self.dyn_gas[i],
                 self.cat(op).unwrap_or(""),
             );
         }
@@ -244,17 +269,24 @@ impl RevmMetricTimeDisplayer {
         Some(MERGE_MAP[opcode as usize]?.1.category)
     }
 
-    fn caculate_gas(&self, opcode: u8, record: &(u64, u64, i128)) -> f64 {
-        let (base_gas, static_gas) = match MERGE_MAP[opcode as usize] {
+    fn caculate_gas(&self, opcode: u8, count: u64, total_gas: i128) -> (f64, f64) {
+        let (base_gas, is_static) = match MERGE_MAP[opcode as usize] {
             Some(opcode_info) => (opcode_info.1.gas, opcode_info.1.static_gas),
-            None => return 0.0,
+            None => return (0.0, 0.0),
         };
 
-        if static_gas {
-            return base_gas.checked_mul(record.0).unwrap_or(0) as f64
+        let static_gas = base_gas.checked_mul(count).unwrap_or(0);
+        if is_static {
+            return (static_gas as f64, 0.0)
         }
 
-        record.2 as f64
+        let dyn_gas = if total_gas > static_gas as i128 {
+            (total_gas - static_gas as i128) as f64 / count as f64
+        } else {
+            0.0
+        };
+
+        (total_gas as f64, dyn_gas)
     }
 
     pub(crate) fn stats(&self, metric_record: &OpcodeRecord) -> OpcodeStats {
@@ -285,17 +317,19 @@ impl RevmMetricTimeDisplayer {
                 });
         }
 
-        let mut opcode_gas: [(f64, f64); 256] = [(0.0, 0.0); 256];
+        let mut opcode_gas: [(f64, f64); OPCODE_NUMBER] = [(0.0, 0.0); OPCODE_NUMBER];
+        let mut dyn_gas: [f64; OPCODE_NUMBER] = [0.0; OPCODE_NUMBER];
         let mut total_gas: f64 = 0.0;
         for (i, v) in metric_record.opcode_record.iter().enumerate() {
             let op = i as u8;
-            let op_gas = self.caculate_gas(op, v);
+            let (op_gas, dync) = self.caculate_gas(op, v.0, v.2);
             opcode_gas[i].0 = op_gas / MGAS_TO_GAS as f64;
             if opcode_gas[i].0 > 0.0 {
                 total_gas += opcode_gas[i].0;
             } else {
                 total_gas -= opcode_gas[i].0;
             }
+            dyn_gas[i] = dync;
         }
 
         let mut count_percent: [f64; OPCODE_NUMBER] = [0.0; OPCODE_NUMBER];
@@ -325,6 +359,7 @@ impl RevmMetricTimeDisplayer {
             ave_cost,
             opcode_gas,
             total_gas,
+            dyn_gas,
             merge_records,
             opcode_record: metric_record.clone(),
         }
@@ -364,7 +399,7 @@ impl ExecutionDurationDisplayer {
     /// print the information of the execution duration record.
     pub(crate) fn print(&self) {
         println!();
-        println!("===============================Metric of execution duration===============================");
+        println!("===============================Breakdown of ExecutionStage===============================");
         println!(
             "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
             "Cat.", "Time (s)", "Time (%)",
@@ -394,11 +429,13 @@ impl DBSpeedDisplayer {
     }
 
     pub(crate) fn print(&self) {
+        let col_len = 20;
         println!();
         println!("===============================Metric of db speed============================");
-        println!("Cat.                           Size (MBytes)   Time (s)   Rate (MBytes/s)");
-
-        let col_len = 20;
+        println!(
+            "{:col_len$}{:>col_len$}{:>col_len$}{:>col_len$}",
+            "Cat.", "Size (MB)", "Time (s)", "Rate (MB/s)"
+        );
 
         let (size, time) = self.record.header_td_info();
         let header_td_size = convert_bytes_to_mega(size);
@@ -514,7 +551,7 @@ impl CacheDBRecordDisplayer {
             self.cache_db_record.penalty_stats().percentile.us_percentile.iter().map(|&v| v).sum();
         let mut cuml = 0.0;
         println!("========================Penalty percentile==========================");
-        println! {"{:<COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}", "Time (us)", " Count (%)", " Cuml. (%)"};
+        println! {"{:<COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}", "Time (ns)", " Count (%)", " Cuml. (%)"};
         for index in 0..self.cache_db_record.penalty_stats().percentile.span_in_ns {
             let pct = self.cache_db_record.penalty_stats().percentile.ns_percentile[index] as f64 /
                 total_cnt as f64;
