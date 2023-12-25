@@ -13,8 +13,10 @@ pub struct ExecutionDurationRecord {
     time_recorder: Instant,
     // Time of execute inner.
     total: u64,
-    // Time of fetching blocks(include get_block_td and block_with_senders).
-    fetch_block: u64,
+    // Time of get_block_td.
+    block_td: u64,
+    // Time of block_with_senders.
+    block_with_senders: u64,
     // Time of Revm execution(execute_and_verify_receipt).
     execution: u64,
     // Time of process state(state.extend)
@@ -38,10 +40,15 @@ impl ExecutionDurationRecord {
         let cycles = Instant::now().checked_cycles_since(self.total_recorder).expect("overflow");
         self.total = self.total.checked_add(cycles).expect("overflow");
     }
-    /// Add time of fetch_block.
-    pub(crate) fn add_fetch_block_duration(&mut self) {
+    /// Add time of block_td.
+    pub(crate) fn add_block_td_duration(&mut self) {
         let cycles = Instant::now().checked_cycles_since(self.time_recorder).expect("overflow");
-        self.fetch_block = self.fetch_block.checked_add(cycles).expect("overflow");
+        self.block_td = self.block_td.checked_add(cycles).expect("overflow");
+    }
+    /// Add time of block_with_senders.
+    pub(crate) fn add_block_with_senders_duration(&mut self) {
+        let cycles = Instant::now().checked_cycles_since(self.time_recorder).expect("overflow");
+        self.block_with_senders = self.block_with_senders.checked_add(cycles).expect("overflow");
     }
     /// Add time of Revm execution.
     pub(crate) fn add_execute_tx_duration(&mut self) {
@@ -66,9 +73,13 @@ impl ExecutionDurationRecord {
     pub fn total(&self) -> u64 {
         self.total
     }
-    /// Return the overhead of fetching blocks.
-    pub fn fetch_block(&self) -> u64 {
-        self.fetch_block
+    /// Return the overhead of block_td.
+    pub fn block_td(&self) -> u64 {
+        self.block_td
+    }
+    /// Return the overhead of block_with_senders.
+    pub fn block_with_senders(&self) -> u64 {
+        self.block_with_senders
     }
     /// Return the overhead of Revm execution.
     pub fn execution(&self) -> u64 {
@@ -84,6 +95,11 @@ impl ExecutionDurationRecord {
     }
     /// Return the overhead of misc.
     pub fn misc(&self) -> u64 {
-        self.total - self.fetch_block - self.execution - self.take_output_state - self.write_to_db
+        self.total -
+            self.block_td -
+            self.block_with_senders -
+            self.execution -
+            self.take_output_state -
+            self.write_to_db
     }
 }

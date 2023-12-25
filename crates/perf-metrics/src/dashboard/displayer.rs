@@ -40,7 +40,7 @@ const COL_WIDTH_BIG: usize = 20;
     feature = "enable_execute_measure",
     feature = "enable_write_to_db_measure"
 ))]
-const COL_WIDTH_LARGE: usize = 40;
+const COL_WIDTH_LARGE: usize = 43;
 
 #[cfg(feature = "enable_opcode_metrics")]
 struct OpcodeMergeRecord {
@@ -407,7 +407,8 @@ impl ExecutionDurationDisplayer {
 
         self.print_line("total", self.record.total());
         self.print_line("misc", self.record.misc());
-        self.print_line("fetch_block", self.record.fetch_block());
+        self.print_line("block_td", self.record.block_td());
+        self.print_line("block_with_senders", self.record.block_with_senders());
         self.print_line("execute_and_verify_receipt", self.record.execution());
         self.print_line("take_output_state", self.record.take_output_state());
         self.print_line("write_to_db", self.record.write_to_db());
@@ -660,33 +661,6 @@ impl ExecuteTxsDisplayer {
     }
 
     pub(crate) fn print(&self) {
-        let total = cycles_as_secs(self.record.total());
-        let transact = cycles_as_secs(self.record.transact());
-        let commit_changes = cycles_as_secs(self.record.commit_changes());
-        let add_receipt = cycles_as_secs(self.record.add_receipt());
-        let apply_post_block_changes =
-            cycles_as_secs(self.record.apply_post_execution_state_change());
-        let merge_transactions = cycles_as_secs(self.record.merge_transactions());
-        let verify_receipt = cycles_as_secs(self.record.verify_receipt());
-        let save_receipts = cycles_as_secs(self.record.save_receipts());
-        let execute = transact +
-            commit_changes +
-            add_receipt +
-            apply_post_block_changes +
-            merge_transactions +
-            verify_receipt +
-            save_receipts;
-        let misc = total - execute;
-
-        let transact_pct = transact as f64 / total as f64;
-        let commit_changes_pct = commit_changes as f64 / total as f64;
-        let add_receipt_pct = add_receipt as f64 / total as f64;
-        let apply_post_block_changes_pct = apply_post_block_changes as f64 / total as f64;
-        let merge_transactions_pct = merge_transactions as f64 / total as f64;
-        let verify_receipt_pct = verify_receipt as f64 / total as f64;
-        let save_receipts_pct = save_receipts as f64 / total as f64;
-        let misc_pct = misc as f64 / total as f64;
-
         println!();
         println!("===============================Metric of execute txs ====================================================");
         println!(
@@ -694,30 +668,64 @@ impl ExecuteTxsDisplayer {
             "Cat.", "Time (s)", "Time (%)",
         );
 
-        self.print_line("total", total, 1.0);
-        self.print_line("misc", misc, misc_pct);
-        self.print_line("transact", transact, transact_pct);
-        self.print_line("commit", commit_changes, commit_changes_pct);
-        self.print_line("add_receipt", add_receipt, add_receipt_pct);
+        self.print_line("total", self.record.total(), false);
+        self.print_line("misc", self.record.misc(), false);
+        self.print_line("transact", self.record.transact(), false);
+        self.print_line("revm_transact", self.record.revm_transact().total, true);
+        self.print_line(
+            "preverify_transaction_inner",
+            self.record.revm_transact().preverify_transaction_inner,
+            true,
+        );
+        self.print_line(
+            "before execute(transact_preverified_inner)",
+            self.record.revm_transact().transact_preverified_inner.before_execute,
+            true,
+        );
+        self.print_line(
+            "execute(transact_preverified_inner)",
+            self.record.revm_transact().transact_preverified_inner.execute,
+            true,
+        );
+        self.print_line(
+            "after_execute(transact_preverified_inner)",
+            self.record.revm_transact().transact_preverified_inner.after_execute,
+            true,
+        );
+        self.print_line("handler_end", self.record.revm_transact().handle_end, true);
+        self.print_line("commit", self.record.commit_changes(), false);
+        self.print_line("add_receipt", self.record.add_receipt(), false);
         self.print_line(
             "apply_post_execution_state_change",
-            apply_post_block_changes,
-            apply_post_block_changes_pct,
+            self.record.apply_post_execution_state_change(),
+            false,
         );
-        self.print_line("merge_transactions", merge_transactions, merge_transactions_pct);
-        self.print_line("verify_receipt", verify_receipt, verify_receipt_pct);
-        self.print_line("save receipts", save_receipts, save_receipts_pct);
+        self.print_line("merge_transactions", self.record.merge_transactions(), false);
+        self.print_line("verify_receipt", self.record.verify_receipt(), false);
+        self.print_line("save receipts", self.record.save_receipts(), false);
 
         println!();
     }
 
-    fn print_line(&self, cat: &str, time: f64, percent: f64) {
-        println!(
-            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}",
-            cat,
-            time,
-            percent * 100.0,
-        );
+    fn print_line(&self, cat: &str, cycles: u64, is_sub: bool) {
+        let time = cycles_as_secs(cycles);
+        let pct = time / cycles_as_secs(self.record.total());
+
+        if is_sub {
+            println!(
+                "{: >COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}",
+                cat,
+                time,
+                pct * 100.0,
+            );
+        } else {
+            println!(
+                "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}",
+                cat,
+                time,
+                pct * 100.0,
+            );
+        }
     }
 }
 
@@ -749,12 +757,12 @@ impl WriteToDbDisplayer {
 
     pub(crate) fn print(&self) {
         // size
-        let revert_storage_size = convert_bytes_to_mega(self.record.revert_storage_size());
-        let revert_account_size = convert_bytes_to_mega(self.record.revert_account_size());
-        let write_receipts_size = convert_bytes_to_mega(self.record.write_receipts_size());
-        let state_account_size = convert_bytes_to_mega(self.record.state_account_size());
-        let state_bytecode_size = convert_bytes_to_mega(self.record.state_bytecode_size());
-        let state_storage_size = convert_bytes_to_mega(self.record.state_storage_size());
+        let revert_storage_size = self.record.revert_storage_size();
+        let revert_account_size = self.record.revert_account_size();
+        let write_receipts_size = self.record.write_receipts_size();
+        let state_account_size = self.record.state_account_size();
+        let state_bytecode_size = self.record.state_bytecode_size();
+        let state_storage_size = self.record.state_storage_size();
         let total_size = revert_storage_size +
             revert_account_size +
             write_receipts_size +
@@ -763,106 +771,146 @@ impl WriteToDbDisplayer {
             state_storage_size;
 
         // time
-        let total_time = cycles_as_secs(self.record.total_time());
-        let revert_storage_time = cycles_as_secs(self.record.revert_storage_time());
-        let revert_account_time = cycles_as_secs(self.record.revert_account_time());
-        let write_receipts_time = cycles_as_secs(self.record.write_receipts_time());
-        let sort_time = cycles_as_secs(self.record.sort_time());
-        let state_account_time = cycles_as_secs(self.record.state_account_time());
-        let state_bytecode_time = cycles_as_secs(self.record.state_bytecode_time());
-        let state_storage_time = cycles_as_secs(self.record.state_storage_time());
+        let total_time = self.record.total_time();
+        let revert_storage_time = self.record.revert_storage_time();
+        let revert_account_time = self.record.revert_account_time();
+        let write_receipts_time = self.record.write_receipts_time();
+        let sort_time = self.record.sort_time();
+        let state_account_time = self.record.state_account_time();
+        let state_bytecode_time = self.record.state_bytecode_time();
+        let state_storage_time = self.record.state_storage_time();
 
-        // time pct
-        let revert_storage_pct = revert_storage_time as f64 / total_time as f64;
-        let revert_account_pct = revert_account_time as f64 / total_time as f64;
-        let write_receipts_pct = write_receipts_time as f64 / total_time as f64;
-        let sort_pct = sort_time as f64 / total_time as f64;
-        let state_account_pct = state_account_time as f64 / total_time as f64;
-        let state_bytecode_pct = state_bytecode_time as f64 / total_time as f64;
-        let state_storage_pct = state_storage_time as f64 / total_time as f64;
-
-        // rate
-        let revert_storage_rate = revert_storage_size / revert_storage_time;
-        let revert_account_rate = revert_account_size / revert_account_time;
-        let write_receipts_rate = write_receipts_size / write_receipts_time;
-        let state_account_rate = state_account_size / state_account_time;
-        let state_bytecode_rate = state_bytecode_size / state_bytecode_time;
-        let state_storage_rate = state_storage_size / state_storage_time;
-        let avg_rate = total_size / total_time;
+        let revert_storage_append_time = self.record.revert_storage_append_time();
+        let revert_account_append_time = self.record.revert_account_append_time();
+        let receipts_append_time = self.record.receipts_append_time();
+        let state_account_upsert_time = self.record.state_account_upsert_time();
+        let state_bytecode_upsert_time = self.record.state_bytecode_upsert_time();
+        let state_storage_upsert_time = self.record.state_storage_upsert_time();
 
         // print
         println!();
         println!("=================================================Metric of write_to_db ===============================================");
         println!(
             "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_LARGE$}",
-            "Cat.",  
-            "Size (MBytes)",   
+            "Category",  
+            "Size (MB)",   
             "Time (s)",    
             "Time (%)",   
-            "Rate (MBytes/s)"
+            "Rate (MB/s)"
         );
 
-        self.print_line("total_of_write_to_db", total_size, total_time, 1.0, avg_rate);
+        self.print_line("total", Some(total_size), total_time);
         self.print_line(
-            "write_storage_in_revert_state",
-            revert_storage_size,
+            "write storage (revert state)",
+            Some(revert_storage_size),
             revert_storage_time,
-            revert_storage_pct,
-            revert_storage_rate,
         );
         self.print_line(
-            "write_account_in_revert_state",
-            revert_account_size,
+            "write storage append time (revert state)",
+            None,
+            revert_storage_append_time,
+        );
+        self.print_line(
+            "write storage iter time (revert state)",
+            None,
+            revert_storage_time - revert_storage_append_time,
+        );
+        self.print_line(
+            "write account (revert state)",
+            Some(revert_account_size),
             revert_account_time,
-            revert_account_pct,
-            revert_account_rate,
         );
         self.print_line(
-            "write_receipts",
-            write_receipts_size,
-            write_receipts_time,
-            write_receipts_pct,
-            write_receipts_rate,
-        );
-        println!(
-            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$.3}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}{: >COL_WIDTH_LARGE$.3}",
-            "sort_in_state_changes",  
-            "NAN",   
-            sort_time,
-            sort_pct,
-            "NAN"
+            "write account append time (revert state)",
+            None,
+            revert_account_append_time,
         );
         self.print_line(
-            "write_account_in_state_changes",
-            state_account_size,
+            "write account iter time (revert state)",
+            None,
+            revert_account_time - revert_account_append_time,
+        );
+        self.print_line("write_receipts", Some(write_receipts_size), write_receipts_time);
+        self.print_line("write receipts append time", None, receipts_append_time);
+        self.print_line(
+            "write receipts iter time",
+            None,
+            write_receipts_time - receipts_append_time,
+        );
+        self.print_line("sort state changes", None, sort_time);
+        self.print_line(
+            "write account (state changes)",
+            Some(state_account_size),
             state_account_time,
-            state_account_pct,
-            state_account_rate,
         );
         self.print_line(
-            "write_bytecode_in_state_changes",
-            state_bytecode_size,
+            "write account upsert time (state changes)",
+            None,
+            state_account_upsert_time,
+        );
+        self.print_line(
+            "write account iter time (state changes)",
+            None,
+            state_account_time - state_account_upsert_time,
+        );
+        self.print_line(
+            "write bytecode (state changes)",
+            Some(state_bytecode_size),
             state_bytecode_time,
-            state_bytecode_pct,
-            state_bytecode_rate,
         );
         self.print_line(
-            "write_storage_in_state_changes",
-            state_storage_size,
+            "write bytecode upsert time (state changes)",
+            None,
+            state_bytecode_upsert_time,
+        );
+        self.print_line(
+            "write bytecode iter time (state changes)",
+            None,
+            state_bytecode_time - state_bytecode_upsert_time,
+        );
+        self.print_line(
+            "write storage (state_changes)",
+            Some(state_storage_size),
             state_storage_time,
-            state_storage_pct,
-            state_storage_rate,
+        );
+        self.print_line(
+            "write storage upsert time (state_changes)",
+            None,
+            state_storage_upsert_time,
+        );
+        self.print_line(
+            "write storage iter time (state_changes)",
+            None,
+            state_storage_time - state_storage_upsert_time,
         );
     }
+    fn print_line(&self, cat: &str, size: Option<usize>, cycles: u64) {
+        let total_time = cycles_as_secs(self.record.total_time());
+        let time = cycles_as_secs(cycles);
+        let pct = time / total_time;
 
-    fn print_line(&self, cat: &str, size: f64, time: f64, percent: f64, rate: f64) {
-        // Cat   Size (MBytes)   Time (s)    Time (%)   Rate (MBytes/s)
+        if size.is_none() {
+            println!(
+                "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$.3}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}{: >COL_WIDTH_LARGE$.3}",
+                cat,
+                "NAN",   
+                time,
+                pct * 100.0,
+                "NAN"
+            );
+
+            return
+        }
+
+        let size = convert_bytes_to_mega(size.expect("Size is empty"));
+        let rate = size / time;
+
         println!(
             "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$.3}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}{: >COL_WIDTH_LARGE$.3}",
             cat,
             size,
             time,
-            percent * 100.0,
+            pct * 100.0,
             rate,
         );
     }

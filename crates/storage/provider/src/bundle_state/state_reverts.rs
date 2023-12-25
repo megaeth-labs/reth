@@ -69,10 +69,10 @@ impl StateReverts {
 
                 tracing::trace!(target: "provider::reverts", ?address, ?storage, "Writing storage reverts");
                 for (key, value) in StorageRevertsIter::new(storage, wiped_storage) {
-                    storage_changeset_cursor.append_dup(storage_id, StorageEntry { key, value })?;
                     #[cfg(feature = "enable_write_to_db_measure")]
                     // sizeof(B256) + sizeof(StorageEntry) = 96
-                    perf_metrics::record_revert_storage_size(96usize);
+                    let _record = perf_metrics::RevertsStorageWrite::new(96usize);
+                    storage_changeset_cursor.append_dup(storage_id, StorageEntry { key, value })?;
                 }
             }
         }
@@ -87,13 +87,13 @@ impl StateReverts {
             // Sort accounts by address.
             account_block_reverts.par_sort_by_key(|a| a.0);
             for (address, info) in account_block_reverts {
+                #[cfg(feature = "enable_write_to_db_measure")]
+                // sizeof(Address) + sizeof(AccountBeforeTx) = 124
+                let _record = perf_metrics::RevertsAccountWrite::new(124usize);
                 account_changeset_cursor.append_dup(
                     block_number,
                     AccountBeforeTx { address, info: info.map(into_reth_acc) },
                 )?;
-                #[cfg(feature = "enable_write_to_db_measure")]
-                // sizeof(Address) + sizeof(AccountBeforeTx) = 124
-                perf_metrics::record_revert_account_size(124usize);
             }
         }
         #[cfg(feature = "enable_write_to_db_measure")]
