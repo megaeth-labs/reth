@@ -167,6 +167,12 @@ pub fn record_after_td() {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
 
+        #[cfg(feature = "enable_execution_duration_record")]
+        {
+            _record.duration_record.add_block_td_duration();
+            _record.duration_record.start_time_record();
+        }
+
         #[cfg(feature = "enable_db_speed_record")]
         {
             let (size, time, _, _) = crate::db_metric::get_db_record();
@@ -182,7 +188,7 @@ pub fn record_after_block_with_senders() {
 
         #[cfg(feature = "enable_execution_duration_record")]
         {
-            _record.duration_record.add_fetch_block_duration();
+            _record.duration_record.add_block_with_senders_duration();
             _record.duration_record.start_time_record();
         }
 
@@ -472,12 +478,50 @@ pub fn start_write_to_db_sub_record() {
     }
 }
 
+/// start write_to_db write record.
+#[cfg(feature = "enable_write_to_db_measure")]
+fn start_write_to_db_write_record() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.start_write_record();
+    }
+}
+
 /// Record data size of write storage changes in StateReverts's write_to_db.
 #[cfg(feature = "enable_write_to_db_measure")]
-pub fn record_revert_storage_size(size: usize) {
+fn record_revert_storage_size(size: usize) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         _record.write_to_db_record.record_revert_storage_size(size);
+    }
+}
+
+/// Record time of write storage append time in StateReverts's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+fn record_revert_storage_append_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_revert_storage_append_time();
+    }
+}
+
+/// Encapsulate this structure to record write_storage in revert state in a RAII manner.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub struct RevertsStorageWrite(usize);
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl RevertsStorageWrite {
+    pub fn new(size: usize) -> Self {
+        start_write_to_db_write_record();
+        Self(size)
+    }
+}
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl Drop for RevertsStorageWrite {
+    fn drop(&mut self) {
+        record_revert_storage_append_time();
+        record_revert_storage_size(self.0);
     }
 }
 
@@ -492,10 +536,39 @@ pub fn record_revert_storage_time() {
 
 /// Record data size of write account changes in StateReverts's write_to_db.
 #[cfg(feature = "enable_write_to_db_measure")]
-pub fn record_revert_account_size(size: usize) {
+fn record_revert_account_size(size: usize) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         _record.write_to_db_record.record_revert_account_size(size);
+    }
+}
+
+/// Record time of write account append time in StateReverts's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+fn record_revert_account_append_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_revert_account_append_time();
+    }
+}
+
+/// Encapsulate this structure to record write_account in revert state in a RAII manner.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub struct RevertsAccountWrite(usize);
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl RevertsAccountWrite {
+    pub fn new(size: usize) -> Self {
+        start_write_to_db_write_record();
+        Self(size)
+    }
+}
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl Drop for RevertsAccountWrite {
+    fn drop(&mut self) {
+        record_revert_account_append_time();
+        record_revert_account_size(self.0);
     }
 }
 
@@ -510,10 +583,39 @@ pub fn record_revert_account_time() {
 
 /// Record data size of write receipts in BundleStateWithReceipts's write_to_db.
 #[cfg(feature = "enable_write_to_db_measure")]
-pub fn record_write_receipts_size(size: usize) {
+fn record_write_receipts_size(size: usize) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         _record.write_to_db_record.record_write_receipts_size(size);
+    }
+}
+
+/// Record time of write receipts append in BundleStateWithReceipts's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+fn record_receipts_append_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_receipts_append_time();
+    }
+}
+
+/// Encapsulate this structure to record write receipts in a RAII manner.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub struct ReceiptsWrite(usize);
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl ReceiptsWrite {
+    pub fn new(size: usize) -> Self {
+        start_write_to_db_write_record();
+        Self(size)
+    }
+}
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl Drop for ReceiptsWrite {
+    fn drop(&mut self) {
+        record_receipts_append_time();
+        record_write_receipts_size(self.0);
     }
 }
 
@@ -537,10 +639,39 @@ pub fn record_sort_time() {
 
 /// Record data size of write account in StateChanges's write_to_db.
 #[cfg(feature = "enable_write_to_db_measure")]
-pub fn record_state_account_size(size: usize) {
+fn record_state_account_size(size: usize) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         _record.write_to_db_record.record_state_account_size(size);
+    }
+}
+
+/// Record time of write account upsert in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+fn record_state_account_upsert_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_state_account_upsert_time();
+    }
+}
+
+/// Encapsulate this structure to record write_account in state changes in a RAII manner.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub struct StateAccountWrite(usize);
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl StateAccountWrite {
+    pub fn new(size: usize) -> Self {
+        start_write_to_db_write_record();
+        Self(size)
+    }
+}
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl Drop for StateAccountWrite {
+    fn drop(&mut self) {
+        record_state_account_upsert_time();
+        record_state_account_size(self.0);
     }
 }
 
@@ -555,10 +686,39 @@ pub fn record_state_account_time() {
 
 /// Record data size of write bytecode in StateChanges's write_to_db.
 #[cfg(feature = "enable_write_to_db_measure")]
-pub fn record_state_bytecode_size(size: usize) {
+fn record_state_bytecode_size(size: usize) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         _record.write_to_db_record.record_state_bytecode_size(size);
+    }
+}
+
+/// Record time of write bytecode upsert in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+fn record_state_bytecode_upsert_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_state_bytecode_upsert_time();
+    }
+}
+
+/// Encapsulate this structure to record write_bytecode in state changes in a RAII manner.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub struct StateBytecodeWrite(usize);
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl StateBytecodeWrite {
+    pub fn new(size: usize) -> Self {
+        start_write_to_db_write_record();
+        Self(size)
+    }
+}
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl Drop for StateBytecodeWrite {
+    fn drop(&mut self) {
+        record_state_bytecode_upsert_time();
+        record_state_bytecode_size(self.0);
     }
 }
 
@@ -573,10 +733,39 @@ pub fn record_state_bytecode_time() {
 
 /// Record data size of write storage in StateChanges's write_to_db.
 #[cfg(feature = "enable_write_to_db_measure")]
-pub fn record_state_storage_size(size: usize) {
+fn record_state_storage_size(size: usize) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         _record.write_to_db_record.record_state_storage_size(size);
+    }
+}
+
+/// Record time of write storage upsert in StateChanges's write_to_db.
+#[cfg(feature = "enable_write_to_db_measure")]
+fn record_state_storage_upsert_time() {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.write_to_db_record.record_state_storage_upsert_time();
+    }
+}
+
+/// Encapsulate this structure to record write_storage in state changes in a RAII manner.
+#[cfg(feature = "enable_write_to_db_measure")]
+pub struct StateStorageWrite(usize);
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl StateStorageWrite {
+    pub fn new(size: usize) -> Self {
+        start_write_to_db_write_record();
+        Self(size)
+    }
+}
+
+#[cfg(feature = "enable_write_to_db_measure")]
+impl Drop for StateStorageWrite {
+    fn drop(&mut self) {
+        record_state_storage_upsert_time();
+        record_state_storage_size(self.0);
     }
 }
 

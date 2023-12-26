@@ -1,6 +1,9 @@
 //! This module is used to support in-depth measurement of function execute_and_verify_receipt
 //! in stage execution.
-use revm_utils::time_utils::{convert_cycles_to_ns_f64, instant::Instant};
+use revm_utils::{
+    metrics::types::TransactTime,
+    time_utils::{convert_cycles_to_ns_f64, instant::Instant},
+};
 
 /// ExecuteTxsRecord
 #[derive(Debug, Clone, Copy, Default)]
@@ -13,6 +16,8 @@ pub struct ExecuteTxsRecord {
     total: u64,
     /// Time of transact.
     transact: u64,
+    /// Time of revm's transact.
+    revm_transact: TransactTime,
     /// Time of commit changes.
     commit_changes: u64,
     /// Time of add receipt.
@@ -37,10 +42,12 @@ impl ExecuteTxsRecord {
         self.sub_record = Instant::now();
     }
 
-    /// Add time of transact.
+    /// Add time of transact, which include revm's transact.
     pub(super) fn transact_record(&mut self) {
         let (cycles, _) = self.record_sub_time();
         self.transact = self.transact.checked_add(cycles).expect("overflow");
+        let revm_transact = revm_utils::metrics::get_transact_time();
+        self.revm_transact.update(&revm_transact);
     }
     /// Add time of commit changes.
     pub(super) fn commit_changes_record(&mut self) {
@@ -97,6 +104,10 @@ impl ExecuteTxsRecord {
     pub fn transact(&self) -> u64 {
         self.transact
     }
+    /// Return revm's transact.
+    pub fn revm_transact(&self) -> TransactTime {
+        self.revm_transact
+    }
     /// Return commit changes.
     pub fn commit_changes(&self) -> u64 {
         self.commit_changes
@@ -120,6 +131,17 @@ impl ExecuteTxsRecord {
     /// Return save_receipts.
     pub fn save_receipts(&self) -> u64 {
         self.save_receipts
+    }
+    /// Return misc.
+    pub fn misc(&self) -> u64 {
+        self.total -
+            self.transact -
+            self.commit_changes -
+            self.add_receipt -
+            self.apply_post_execution_state_change -
+            self.merge_transactions -
+            self.verify_receipt -
+            self.save_receipts
     }
     /// TODO: This function needs to be deleted later on.
     pub fn print(&self) {

@@ -45,4 +45,6 @@ enable_cache_record = [
 ]
 enable_execute_measure = [
     "perf-metrics/enable_execute_measure",
+    "revm/enable_transact_measure",
 ]
+
