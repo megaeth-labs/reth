@@ -324,7 +324,7 @@ impl BundleStateWithReceipts {
                                     .iter()
                                     .map(|log| log.topics.len() * 32 + log.data.0.len())
                                     .sum::<usize>();
-                            perf_metrics::record_write_receipts_size(size);
+                            let _record = perf_metrics::ReceiptsWrite::new(size);
                         }
                         receipts_cursor.append(first_tx_index + tx_idx as u64, receipt)?;
                     }

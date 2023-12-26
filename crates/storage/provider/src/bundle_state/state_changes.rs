@@ -36,10 +36,10 @@ impl StateChanges {
         for (address, account) in self.0.accounts.into_iter() {
             if let Some(account) = account {
                 tracing::trace!(target: "provider::bundle_state", ?address, "Updating plain state account");
-                accounts_cursor.upsert(address, into_reth_acc(account))?;
                 #[cfg(feature = "enable_write_to_db_measure")]
                 // sizeof(Address) + sizeof(Account) = 100
-                perf_metrics::record_state_account_size(100usize);
+                let _record = perf_metrics::StateAccountWrite::new(100usize);
+                accounts_cursor.upsert(address, into_reth_acc(account))?;
             } else if accounts_cursor.seek_exact(address)?.is_some() {
                 tracing::trace!(target: "provider::bundle_state", ?address, "Deleting plain state account");
                 accounts_cursor.delete_current()?;
@@ -54,7 +54,8 @@ impl StateChanges {
         for (hash, bytecode) in self.0.contracts.into_iter() {
             #[cfg(feature = "enable_write_to_db_measure")]
             // size_of_val(hash) + size_of::<Bytecode>() = 88
-            perf_metrics::record_state_bytecode_size(88usize + bytecode.bytecode.0.len());
+            let _record =
+                perf_metrics::StateBytecodeWrite::new(88usize + bytecode.bytecode.0.len());
             bytecodes_cursor.upsert(hash, Bytecode(bytecode))?;
         }
         #[cfg(feature = "enable_write_to_db_measure")]
@@ -85,10 +86,10 @@ impl StateChanges {
                 }
 
                 if entry.value != U256::ZERO {
-                    storages_cursor.upsert(address, entry)?;
                     #[cfg(feature = "enable_write_to_db_measure")]
                     // sizeof(Address) + sizeof(StorageEntry) = 84
-                    perf_metrics::record_state_storage_size(84usize);
+                    let _record = perf_metrics::StateStorageWrite::new(84usize);
+                    storages_cursor.upsert(address, entry)?;
                 }
             }
         }

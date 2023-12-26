@@ -12,6 +12,8 @@ pub struct WriteToDbRecord {
     start_record: Instant,
     /// Record the start time of each subfunction.
     sub_record: Instant,
+    /// Record the start time of each put or upsert.
+    write_start_record: Instant,
 
     /// Time of write_to_db.
     total: u64,
@@ -20,15 +22,21 @@ pub struct WriteToDbRecord {
     revert_storage_time: u64,
     /// Data size of write storage changes in StateReverts.
     revert_storage_size: usize,
+    /// Time of append_dup when write storage changes in StateReverts.
+    revert_storage_append_time: u64,
     /// Time of write account changes in StateReverts.
     revert_account_time: u64,
     /// Data size of write account changes in StateReverts.
     revert_account_size: usize,
+    /// Time of append_dup when write account changes in StateReverts.
+    revert_account_append_time: u64,
 
     /// Time of write receipts.
     write_receipts_time: u64,
     /// Data size of write receipts.
     write_receipts_size: usize,
+    /// Time of append when write receipts.
+    receipts_append_time: u64,
 
     /// Time of sort in StateChanges's write_to_db.
     sort_time: u64,
@@ -36,14 +44,22 @@ pub struct WriteToDbRecord {
     state_account_time: u64,
     /// Data size of write account in StateChanges.
     state_account_size: usize,
+    /// Time of upsert when write account changes in StateChanges.
+    state_account_upsert_time: u64,
+
     /// Time of write bytecode in StateChanges.
     state_bytecode_time: u64,
     /// Data size of write bytecode in StateChanges.
     state_bytecode_size: usize,
+    /// Time of upsert when write bytecode in StateChanges.
+    state_bytecode_upsert_time: u64,
+
     /// Time of write storage in StateChanges.
     state_storage_time: u64,
     /// Data size of write storage in StateChanges.
     state_storage_size: usize,
+    /// Time of upsert when write storage in StateChanges.
+    state_storage_upsert_time: u64,
 }
 
 impl WriteToDbRecord {
@@ -127,6 +143,55 @@ impl WriteToDbRecord {
         self.sub_record = now;
         (cycles, now)
     }
+
+    /// Record time of write db.
+    fn record_write_time(&mut self) -> u64 {
+        let now = Instant::now();
+        let cycles = now.checked_cycles_since(self.write_start_record).unwrap_or(0);
+        self.write_start_record = now;
+        cycles
+    }
+
+    /// Start write record.
+    pub(super) fn start_write_record(&mut self) {
+        self.write_start_record = Instant::now();
+    }
+    /// Record revert_storage_append_time.
+    pub(super) fn record_revert_storage_append_time(&mut self) {
+        let cycles = self.record_write_time();
+        self.revert_storage_append_time =
+            self.revert_storage_append_time.checked_add(cycles).expect("overflow");
+    }
+    /// Record revert_account_append_time.
+    pub(super) fn record_revert_account_append_time(&mut self) {
+        let cycles = self.record_write_time();
+        self.revert_account_append_time =
+            self.revert_account_append_time.checked_add(cycles).expect("overflow");
+    }
+    /// Record receipts_append_time.
+    pub(super) fn record_receipts_append_time(&mut self) {
+        let cycles = self.record_write_time();
+        self.receipts_append_time =
+            self.receipts_append_time.checked_add(cycles).expect("overflow");
+    }
+    /// Record state_account_upsert_time.
+    pub(super) fn record_state_account_upsert_time(&mut self) {
+        let cycles = self.record_write_time();
+        self.state_account_upsert_time =
+            self.state_account_upsert_time.checked_add(cycles).expect("overflow");
+    }
+    /// Record state_bytecode_upsert_time.
+    pub(super) fn record_state_bytecode_upsert_time(&mut self) {
+        let cycles = self.record_write_time();
+        self.state_bytecode_upsert_time =
+            self.state_bytecode_upsert_time.checked_add(cycles).expect("overflow");
+    }
+    /// Record state_storage_upsert_time.
+    pub(super) fn record_state_storage_upsert_time(&mut self) {
+        let cycles = self.record_write_time();
+        self.state_storage_upsert_time =
+            self.state_storage_upsert_time.checked_add(cycles).expect("overflow");
+    }
 }
 
 impl WriteToDbRecord {
@@ -185,5 +250,30 @@ impl WriteToDbRecord {
     /// Return data size of write storage in StateChanges.
     pub fn state_storage_size(&self) -> usize {
         self.state_storage_size
+    }
+
+    /// Return revert_storage_append_time.
+    pub fn revert_storage_append_time(&self) -> u64 {
+        self.revert_storage_append_time
+    }
+    /// Return revert_account_append_time.
+    pub fn revert_account_append_time(&self) -> u64 {
+        self.revert_account_append_time
+    }
+    /// Return receipts_append_time.
+    pub fn receipts_append_time(&self) -> u64 {
+        self.receipts_append_time
+    }
+    /// Return state_account_upsert_time.
+    pub fn state_account_upsert_time(&self) -> u64 {
+        self.state_account_upsert_time
+    }
+    /// Return state_bytecode_upsert_time.
+    pub fn state_bytecode_upsert_time(&self) -> u64 {
+        self.state_bytecode_upsert_time
+    }
+    /// Return state_storage_upsert_time.
+    pub fn state_storage_upsert_time(&self) -> u64 {
+        self.state_storage_upsert_time
     }
 }
