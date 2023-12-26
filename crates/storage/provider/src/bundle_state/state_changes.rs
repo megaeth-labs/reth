@@ -40,9 +40,6 @@ impl StateChanges {
                 // sizeof(Address) + sizeof(Account) = 100
                 let _record = perf_metrics::StateAccountWrite::new(100usize);
                 accounts_cursor.upsert(address, into_reth_acc(account))?;
-                #[cfg(feature = "enable_write_to_db_measure")]
-                // sizeof(Address) + sizeof(Account) = 100
-                perf_metrics::record_state_account_size(100usize);
             } else if accounts_cursor.seek_exact(address)?.is_some() {
                 tracing::trace!(target: "provider::bundle_state", ?address, "Deleting plain state account");
                 accounts_cursor.delete_current()?;
@@ -95,7 +92,8 @@ impl StateChanges {
                     storages_cursor.upsert(address, entry)?;
                     #[cfg(feature = "enable_write_to_db_measure")]
                     // sizeof(Address) + sizeof(StorageEntry) = 84
-                    perf_metrics::record_state_storage_size(84usize);
+                    let _record = perf_metrics::StateStorageWrite::new(84usize);
+                    storages_cursor.upsert(address, entry)?;
                 }
             }
         }
