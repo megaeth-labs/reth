@@ -516,12 +516,12 @@ impl CacheDBRecordDisplayer {
     }
 
     pub(crate) fn print(&self) {
-        println!("==========================Metric of CacheDb=====================");
-        println!("============================Hit in CacheDb======================");
+        println!("==========================Metric of State=====================");
+        println!("============================Hit in State======================");
         // print miss ratio
         println!(
             "{: <COL_WIDTH_BIG$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_BIG$}",
-            "CacheDb functions", "Hits", "Misses", "Miss ratio (%)",
+            "State functions", "Hits", "Misses", "Miss ratio (%)",
         );
         self.print_pct("blockhash", Function::BlockHash);
         self.print_pct("code_by_hash", Function::CodeByHash);
@@ -537,8 +537,8 @@ impl CacheDBRecordDisplayer {
 
         // print total penalty
         let total_penalty = self.cache_db_record.penalty_stats().time.function.iter().sum();
-        println!("=====================Misses penalty in CacheDb====================");
-        println! {"{:<COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}", "CacheDb functions", "Penalty time(s)"};
+        println!("=====================Misses penalty in State ====================");
+        println! {"{:<COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}", "State functions", "Penalty time(s)"};
         self.print_penalty("blockhash", Function::BlockHash);
         self.print_penalty("code_by_hash", Function::CodeByHash);
         self.print_penalty("load_account/basic", Function::LoadCacheAccount);
@@ -580,9 +580,9 @@ impl CacheDBRecordDisplayer {
             );
         }
 
-        // print cache size
+        // print State size
         println!();
-        println! {"CacheDB size: {:?}", self.cachedb_size};
+        println! {"State size: {:?}", self.cachedb_size};
     }
 }
 
@@ -662,7 +662,7 @@ impl ExecuteTxsDisplayer {
 
     pub(crate) fn print(&self) {
         println!();
-        println!("===============================Metric of execute txs ====================================================");
+        println!("===============================Breakdown of execute txs ====================================================");
         println!(
             "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
             "Cat.", "Time (s)", "Time (%)",
@@ -789,7 +789,7 @@ impl WriteToDbDisplayer {
 
         // print
         println!();
-        println!("=================================================Metric of write_to_db ===============================================");
+        println!("=================================================Breakdown of write_to_db ===============================================");
         println!(
             "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_LARGE$}",
             "Category",  
@@ -806,14 +806,14 @@ impl WriteToDbDisplayer {
             revert_storage_time,
         );
         self.print_line(
-            "write storage append time (revert state)",
-            None,
-            revert_storage_append_time,
-        );
-        self.print_line(
             "write storage iter time (revert state)",
             None,
             revert_storage_time - revert_storage_append_time,
+        );
+        self.print_line(
+            "write storage append time (revert state)",
+            Some(revert_storage_size),
+            revert_storage_append_time,
         );
         self.print_line(
             "write account (revert state)",
@@ -821,21 +821,25 @@ impl WriteToDbDisplayer {
             revert_account_time,
         );
         self.print_line(
-            "write account append time (revert state)",
-            None,
-            revert_account_append_time,
-        );
-        self.print_line(
             "write account iter time (revert state)",
             None,
             revert_account_time - revert_account_append_time,
         );
+        self.print_line(
+            "write account append time (revert state)",
+            Some(revert_account_size),
+            revert_account_append_time,
+        );
         self.print_line("write_receipts", Some(write_receipts_size), write_receipts_time);
-        self.print_line("write receipts append time", None, receipts_append_time);
         self.print_line(
             "write receipts iter time",
             None,
             write_receipts_time - receipts_append_time,
+        );
+        self.print_line(
+            "write receipts append time",
+            Some(write_receipts_size),
+            receipts_append_time,
         );
         self.print_line("sort state changes", None, sort_time);
         self.print_line(
@@ -844,14 +848,14 @@ impl WriteToDbDisplayer {
             state_account_time,
         );
         self.print_line(
-            "write account upsert time (state changes)",
-            None,
-            state_account_upsert_time,
-        );
-        self.print_line(
             "write account iter time (state changes)",
             None,
             state_account_time - state_account_upsert_time,
+        );
+        self.print_line(
+            "write account upsert time (state changes)",
+            Some(state_account_size),
+            state_account_upsert_time,
         );
         self.print_line(
             "write bytecode (state changes)",
@@ -859,14 +863,14 @@ impl WriteToDbDisplayer {
             state_bytecode_time,
         );
         self.print_line(
-            "write bytecode upsert time (state changes)",
-            None,
-            state_bytecode_upsert_time,
-        );
-        self.print_line(
             "write bytecode iter time (state changes)",
             None,
             state_bytecode_time - state_bytecode_upsert_time,
+        );
+        self.print_line(
+            "write bytecode upsert time (state changes)",
+            Some(state_bytecode_size),
+            state_bytecode_upsert_time,
         );
         self.print_line(
             "write storage (state_changes)",
@@ -874,14 +878,14 @@ impl WriteToDbDisplayer {
             state_storage_time,
         );
         self.print_line(
-            "write storage upsert time (state_changes)",
-            None,
-            state_storage_upsert_time,
-        );
-        self.print_line(
             "write storage iter time (state_changes)",
             None,
             state_storage_time - state_storage_upsert_time,
+        );
+        self.print_line(
+            "write storage upsert time (state_changes)",
+            Some(state_storage_size),
+            state_storage_upsert_time,
         );
     }
     fn print_line(&self, cat: &str, size: Option<usize>, cycles: u64) {
