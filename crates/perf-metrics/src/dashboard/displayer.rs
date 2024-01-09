@@ -193,6 +193,10 @@ impl OpcodeStats {
                 self.cat(op).unwrap_or(""),
             );
         }
+
+        println!();
+        println!();
+        println!("additional rdtsc count: {}", self.opcode_record.additional_count);
     }
     fn print_category(&self) {
         println!("\n");
