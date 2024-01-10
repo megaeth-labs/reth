@@ -247,7 +247,7 @@ impl OpcodeStats {
 
         let ns_span_in_us =
             ((self.opcode_record.sload_percentile.span_in_ns * 100) as f64 / 1000.0) as usize;
-        for index in ns_span_in_us..self.opcode_record.sload_percentile.span_in_ns {
+        for index in ns_span_in_us..self.opcode_record.sload_percentile.span_in_us {
             let pct =
                 self.opcode_record.sload_percentile.us_percentile[index] as f64 / total_cnt as f64;
             cuml += pct;
@@ -572,7 +572,7 @@ impl CacheDBRecordDisplayer {
         let ns_span_in_us = ((self.cache_db_record.penalty_stats().percentile.span_in_ns * 100)
             as f64 /
             1000.0) as usize;
-        for index in ns_span_in_us..self.cache_db_record.penalty_stats().percentile.span_in_ns {
+        for index in ns_span_in_us..self.cache_db_record.penalty_stats().percentile.span_in_us {
             let pct = self.cache_db_record.penalty_stats().percentile.us_percentile[index] as f64 /
                 total_cnt as f64;
             cuml += pct;
