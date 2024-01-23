@@ -196,7 +196,13 @@ impl OpcodeStats {
 
         println!();
         println!();
-        println!("additional rdtsc count: {}", self.opcode_record.additional_count);
+        println!("call additional rdtsc count: {}", self.opcode_record.additional_count[0]);
+        println!("call_code additional rdtsc count: {}", self.opcode_record.additional_count[1]);
+        println!(
+            "delegate_call additional rdtsc count: {}",
+            self.opcode_record.additional_count[2]
+        );
+        println!("static_call additional rdtsc count: {}", self.opcode_record.additional_count[3]);
     }
     fn print_category(&self) {
         println!("\n");
@@ -606,7 +612,7 @@ impl TpsAndGasRecordDisplayer {
 
     pub(crate) fn update_tps_and_gas(&mut self, block_number: u64, txs: u128, gas: u128) {
         if 0 == block_number % Self::N {
-            self.print(txs, gas);
+            self.print(block_number, txs, gas);
         }
 
         self.last_txs = txs;
@@ -620,10 +626,10 @@ impl TpsAndGasRecordDisplayer {
     }
 
     pub(crate) fn stop_record(&mut self) {
-        self.print(self.last_txs, self.last_gas);
+        self.print(0, self.last_txs, self.last_gas);
     }
 
-    fn print(&mut self, txs: u128, gas: u128) {
+    fn print(&mut self, block_number: u64, txs: u128, gas: u128) {
         let elapsed_ns = self.pre_instant.elapsed().as_nanos();
         let delta_txs = txs - self.pre_txs;
         let delta_gas = gas - self.pre_gas;
@@ -637,8 +643,8 @@ impl TpsAndGasRecordDisplayer {
 
         println!("\n==================Metric of tps and gas========================");
         println!("elapsed(ns) : {:?}", elapsed_ns);
-        println!("TPS : {:?}", tps);
-        println!("MGas: {:.3}\n", mgas_ps);
+        println!("block_number: {:?}, TPS : {:?}", block_number, tps);
+        println!("block_number: {:?}, MGas: {:.3}\n", block_number, mgas_ps);
     }
 }
 
