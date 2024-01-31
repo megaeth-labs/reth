@@ -150,7 +150,7 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             // Fetch the block
             let fetch_block_start = Instant::now();
             #[cfg(feature = "open_performance_dashboard")]
-            perf_metrics::record_before_td();
+            perf_metrics::record_before_td(block_number);
             let td = provider
                 .header_td_by_number(block_number)?
                 .ok_or_else(|| ProviderError::HeaderNotFound(block_number.into()))?;
