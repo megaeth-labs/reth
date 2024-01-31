@@ -148,7 +148,7 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         for block_number in start_block..=max_block {
             let time = Instant::now();
             #[cfg(feature = "open_performance_dashboard")]
-            perf_metrics::record_before_td();
+            perf_metrics::record_before_td(block_number);
             let td = provider
                 .header_td_by_number(block_number)?
                 .ok_or_else(|| ProviderError::HeaderNotFound(block_number.into()))?;

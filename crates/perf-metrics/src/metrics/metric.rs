@@ -38,6 +38,8 @@ pub enum MetricEvent {
     /// Tps and gas record switch.
     #[cfg(feature = "enable_tps_gas_record")]
     BlockTpsAndGasSwitch {
+        /// current block_number.
+        block_number: u64,
         /// true: start tps and gas record.
         /// false: stop tps and gas record.
         switch: bool,
@@ -57,6 +59,8 @@ pub enum MetricEvent {
     /// CacheDB metric record.
     #[cfg(feature = "enable_cache_record")]
     CacheDbInfo {
+        /// current block_number.
+        block_number: u64,
         /// cache db size.
         size: usize,
         /// cache db record.
@@ -104,6 +108,9 @@ struct ExecutionStageMetric {
 
     /// A channel for sending recorded indicator information to the dashboard for display.
     events_tx: Option<MetricEventsSender>,
+
+    /// Used to record the current block_number.
+    block_number: u64,
 }
 
 static mut METRIC_RECORDER: Option<ExecutionStageMetric> = None;
@@ -143,15 +150,13 @@ pub fn record_before_loop() {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
 
         #[cfg(feature = "enable_tps_gas_record")]
-        let _ = _record
-            .events_tx
-            .as_mut()
-            .expect("No sender")
-            .send(MetricEvent::BlockTpsAndGasSwitch { switch: true });
+        let _ = _record.events_tx.as_mut().expect("No sender").send(
+            MetricEvent::BlockTpsAndGasSwitch { block_number: _record.block_number, switch: true },
+        );
     }
 }
 
-pub fn record_before_td() {
+pub fn record_before_td(block_number: u64) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
 
@@ -160,6 +165,8 @@ pub fn record_before_td() {
 
         #[cfg(feature = "enable_db_speed_record")]
         crate::db_metric::start_db_record();
+
+        _record.block_number = block_number;
     }
 }
 
@@ -238,11 +245,9 @@ pub fn record_after_take_output_state() {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         #[cfg(feature = "enable_tps_gas_record")]
-        let _ = _record
-            .events_tx
-            .as_mut()
-            .expect("No sender")
-            .send(MetricEvent::BlockTpsAndGasSwitch { switch: false });
+        let _ = _record.events_tx.as_mut().expect("No sender").send(
+            MetricEvent::BlockTpsAndGasSwitch { block_number: _record.block_number, switch: false },
+        );
 
         #[cfg(feature = "enable_execution_duration_record")]
         {
@@ -286,6 +291,7 @@ pub fn record_at_end(_cachedb_size: usize) {
             let cachedb_record = revm_utils::metrics::get_cache_record();
             _record.cachedb_record.update(&cachedb_record);
             let _ = _record.events_tx.as_mut().expect("No sender").send(MetricEvent::CacheDbInfo {
+                block_number: _record.block_number,
                 size: _cachedb_size,
                 record: _record.cachedb_record,
             });

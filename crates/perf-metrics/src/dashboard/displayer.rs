@@ -3,7 +3,9 @@ use super::opcode::*;
 #[cfg(feature = "enable_opcode_metrics")]
 use revm::OpCode;
 #[cfg(feature = "enable_opcode_metrics")]
-use revm_utils::{metrics::types::OpcodeRecord, time_utils::convert_cycles_to_ns_f64};
+use revm_utils::metrics::types::OpcodeRecord;
+#[cfg(any(feature = "enable_opcode_metrics", feature = "enable_cache_record"))]
+use revm_utils::time_utils::convert_cycles_to_ns_f64;
 
 #[cfg(feature = "enable_opcode_metrics")]
 use std::collections::BTreeMap;
@@ -32,15 +34,14 @@ const MGAS_TO_GAS: u64 = 1_000_000u64;
     feature = "enable_write_to_db_measure"
 ))]
 const COL_WIDTH_MIDDLE: usize = 14;
-#[cfg(feature = "enable_cache_record")]
+#[cfg(any(feature = "enable_cache_record", feature = "enable_write_to_db_measure"))]
 const COL_WIDTH_BIG: usize = 20;
 #[cfg(any(
-    feature = "enable_cache_record",
     feature = "enable_execution_duration_record",
     feature = "enable_execute_measure",
     feature = "enable_write_to_db_measure"
 ))]
-const COL_WIDTH_LARGE: usize = 43;
+const COL_WIDTH_LARGE: usize = 48;
 
 #[cfg(feature = "enable_opcode_metrics")]
 struct OpcodeMergeRecord {
@@ -242,8 +243,8 @@ impl OpcodeStats {
         println!("in_us: {:?}", self.opcode_record.sload_percentile.us_percentile);
         println!();
         println!();
-        println!("================================sload time percentile=====================================");
-        println!("Time (ns)    Count (%)    Cuml. (%)");
+        println!("==========sload time percentile=========");
+        println!("Time (ns)      Count (%)       Cuml. (%)");
         for index in 0..self.opcode_record.sload_percentile.span_in_ns {
             let pct =
                 self.opcode_record.sload_percentile.ns_percentile[index] as f64 / total_cnt as f64;
@@ -409,7 +410,7 @@ impl ExecutionDurationDisplayer {
     /// print the information of the execution duration record.
     pub(crate) fn print(&self) {
         println!();
-        println!("===============================Breakdown of ExecutionStage===============================");
+        println!("=========================Breakdown of ExecutionStage========================");
         println!(
             "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
             "Cat.", "Time (s)", "Time (%)",
@@ -442,7 +443,9 @@ impl DBSpeedDisplayer {
     pub(crate) fn print(&self) {
         let col_len = 20;
         println!();
-        println!("===============================Metric of db speed============================");
+        println!(
+            "==================================Metric of db speed============================"
+        );
         println!(
             "{:col_len$}{:>col_len$}{:>col_len$}{:>col_len$}",
             "Cat.", "Size (MB)", "Time (s)", "Rate (MB/s)"
@@ -452,7 +455,7 @@ impl DBSpeedDisplayer {
         let header_td_size = convert_bytes_to_mega(size);
         let header_td_time = time.as_secs_f64();
         let header_td_rate = header_td_size / header_td_time;
-        println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "header_td         ",
+        println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "header_td",
         header_td_size, header_td_time, header_td_rate};
 
         let (size, time) = self.record.block_with_senders_info();
@@ -466,7 +469,7 @@ impl DBSpeedDisplayer {
         let write_to_db_time = time.as_secs_f64();
         let write_to_db_size = convert_bytes_to_mega(size);
         let write_to_db_rate = write_to_db_size / write_to_db_time;
-        println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "write_to_db            ",
+        println! {"{:col_len$}{:>col_len$.3}{:>col_len$.3}{:>col_len$.3}", "write_to_db",
         write_to_db_size, write_to_db_time, write_to_db_rate};
 
         println!();
@@ -478,14 +481,21 @@ impl DBSpeedDisplayer {
 pub(crate) struct CacheDBRecordDisplayer {
     cache_db_record: CacheDbRecord,
     cachedb_size: usize,
+    block_number: u64,
     miss_pct: [f64; 5],
 }
 
 #[cfg(feature = "enable_cache_record")]
 impl CacheDBRecordDisplayer {
-    pub(crate) fn update_cachedb_record(&mut self, size: usize, record: CacheDbRecord) {
+    pub(crate) fn update_cachedb_record(
+        &mut self,
+        block_number: u64,
+        size: usize,
+        record: CacheDbRecord,
+    ) {
         self.cache_db_record = record;
         self.cachedb_size = size;
+        self.block_number = block_number;
         self.calculate_miss_ratio();
     }
 
@@ -502,58 +512,60 @@ impl CacheDBRecordDisplayer {
             total_stats.function.iter().sum::<u64>() as f64;
     }
 
-    fn print_line(&self, function: &str, hits: u64, misses: u64, misses_pct: f64) {
+    fn print_line(
+        &self,
+        function: &str,
+        hits: u64,
+        misses: u64,
+        misses_pct: f64,
+        penalty: f64,
+        avg_penalty: f64,
+    ) {
         println!(
-            "{: <COL_WIDTH_BIG$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_BIG$.3}",
-            function, hits, misses, misses_pct
+            "{: <COL_WIDTH_BIG$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_BIG$.3}{:>COL_WIDTH_BIG$.3}{:>COL_WIDTH_BIG$.3}",
+            function, hits, misses, misses_pct, penalty, avg_penalty
         );
     }
 
-    fn print_pct(&self, name: &str, function: Function) {
+    fn print_cat(&self, name: &str, function: Function) {
         let index = function as usize;
+        let miss_count = self.cache_db_record.miss_stats().function[index];
+        let penalty = cycles_as_secs(self.cache_db_record.penalty_stats().time.function[index]);
+        let avg_penalty =
+            convert_cycles_to_ns_f64(self.cache_db_record.penalty_stats().time.function[index]) /
+                (1000 * miss_count) as f64;
 
         self.print_line(
             name,
             self.cache_db_record.hit_stats().function[index],
-            self.cache_db_record.miss_stats().function[index],
+            miss_count,
             self.miss_pct[index] * 100.0,
+            penalty,
+            avg_penalty,
         );
-    }
-
-    fn print_penalty(&self, name: &str, function: Function) {
-        let index = function as usize;
-        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", name, cycles_as_secs(self.cache_db_record.penalty_stats().time.function[index])};
     }
 
     pub(crate) fn print(&self) {
-        println!("==========================Metric of State=====================");
-        println!("============================Hit in State======================");
-        // print miss ratio
+        println!("================================================ Metric of State ===========================================");
         println!(
-            "{: <COL_WIDTH_BIG$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_BIG$}",
-            "State functions", "Hits", "Misses", "Miss ratio (%)",
+            "{: <COL_WIDTH_BIG$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_BIG$}{:>COL_WIDTH_BIG$}{:>COL_WIDTH_BIG$}",
+            "State functions", "Hits", "Misses", "Miss ratio (%)","Penalty time(s)", "Avg penalty (us)"
         );
-        self.print_pct("blockhash", Function::BlockHash);
-        self.print_pct("code_by_hash", Function::CodeByHash);
-        self.print_pct("load_account/basic", Function::LoadCacheAccount);
-        self.print_pct("storage", Function::Storage);
+        self.print_cat("blockhash", Function::BlockHash);
+        self.print_cat("code_by_hash", Function::CodeByHash);
+        self.print_cat("load_account/basic", Function::LoadCacheAccount);
+        self.print_cat("storage", Function::Storage);
+
+        let total_penalty = self.cache_db_record.penalty_stats().time.function.iter().sum();
+        let total_miss_count: u64 = self.cache_db_record.miss_stats().function.iter().sum();
         self.print_line(
             "total",
             self.cache_db_record.hit_stats().function.iter().sum(),
             self.cache_db_record.miss_stats().function.iter().sum(),
             self.miss_pct[4] * 100.0,
+            cycles_as_secs(total_penalty),
+            convert_cycles_to_ns_f64(total_penalty) / (total_miss_count * 1000) as f64,
         );
-        println!();
-
-        // print total penalty
-        let total_penalty = self.cache_db_record.penalty_stats().time.function.iter().sum();
-        println!("=====================Misses penalty in State ====================");
-        println! {"{:<COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}", "State functions", "Penalty time(s)"};
-        self.print_penalty("blockhash", Function::BlockHash);
-        self.print_penalty("code_by_hash", Function::CodeByHash);
-        self.print_penalty("load_account/basic", Function::LoadCacheAccount);
-        self.print_penalty("storage", Function::Storage);
-        println! {"{: <COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$.3}", "total", cycles_as_secs(total_penalty)};
         println!();
 
         // print penalty distribution
@@ -561,14 +573,16 @@ impl CacheDBRecordDisplayer {
         let total_cnt: u64 =
             self.cache_db_record.penalty_stats().percentile.us_percentile.iter().map(|&v| v).sum();
         let mut cuml = 0.0;
-        println!("========================Penalty percentile==========================");
-        println! {"{:<COL_WIDTH_LARGE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}", "Time (ns)", " Count (%)", " Cuml. (%)"};
+        println!("===================Penalty percentile=============");
+        println!("Time (ns)                 Count (%)      Cuml. (%)");
+        // println! {"{:<COL_WIDTH_BIG$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}", "Time (ns)",
+        // "Count (%)", "Cuml. (%)"};
         for index in 0..self.cache_db_record.penalty_stats().percentile.span_in_ns {
             let pct = self.cache_db_record.penalty_stats().percentile.ns_percentile[index] as f64 /
                 total_cnt as f64;
             cuml += pct;
             println!(
-                "{:<COL_WIDTH_LARGE$} {:>COL_WIDTH_MIDDLE$.3} {:>COL_WIDTH_MIDDLE$.3}",
+                "{:<COL_WIDTH_BIG$} {:>COL_WIDTH_MIDDLE$.3} {:>COL_WIDTH_MIDDLE$.3}",
                 (index + 1) * 100,
                 pct * 100.0,
                 cuml * 100.0
@@ -583,7 +597,7 @@ impl CacheDBRecordDisplayer {
                 total_cnt as f64;
             cuml += pct;
             println!(
-                "{:<COL_WIDTH_LARGE$} {:>COL_WIDTH_MIDDLE$.3} {:>COL_WIDTH_MIDDLE$.3}",
+                "{:<COL_WIDTH_BIG$} {:>COL_WIDTH_MIDDLE$.3} {:>COL_WIDTH_MIDDLE$.3}",
                 (index + 1) * 1000,
                 pct * 100.0,
                 cuml * 100.0
@@ -592,7 +606,7 @@ impl CacheDBRecordDisplayer {
 
         // print State size
         println!();
-        println! {"State size: {:?}", self.cachedb_size};
+        println! {"block_number: {:?}, State size: {:?}", self.block_number, self.cachedb_size};
     }
 }
 
@@ -625,8 +639,8 @@ impl TpsAndGasRecordDisplayer {
         self.pre_instant = Instant::now();
     }
 
-    pub(crate) fn stop_record(&mut self) {
-        self.print(0, self.last_txs, self.last_gas);
+    pub(crate) fn stop_record(&mut self, block_number: u64) {
+        self.print(block_number, self.last_txs, self.last_gas);
     }
 
     fn print(&mut self, block_number: u64, txs: u128, gas: u128) {
@@ -672,70 +686,56 @@ impl ExecuteTxsDisplayer {
 
     pub(crate) fn print(&self) {
         println!();
-        println!("===============================Breakdown of execute txs ====================================================");
+        println!("=============================Breakdown of execute txs ======================");
         println!(
             "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
             "Cat.", "Time (s)", "Time (%)",
         );
 
-        self.print_line("total", self.record.total(), false);
-        self.print_line("misc", self.record.misc(), false);
-        self.print_line("transact", self.record.transact(), false);
-        self.print_line("revm_transact", self.record.revm_transact().total, true);
+        self.print_line("total", self.record.total());
+        self.print_line("misc", self.record.misc());
+        self.print_line("transact", self.record.transact());
+        self.print_line("    revm_transact", self.record.revm_transact().total);
         self.print_line(
-            "preverify_transaction_inner",
+            "    preverify_transaction_inner",
             self.record.revm_transact().preverify_transaction_inner,
-            true,
         );
         self.print_line(
-            "before execute(transact_preverified_inner)",
+            "    before execute(transact_preverified_inner)",
             self.record.revm_transact().transact_preverified_inner.before_execute,
-            true,
         );
         self.print_line(
-            "execute(transact_preverified_inner)",
+            "    execute(transact_preverified_inner)",
             self.record.revm_transact().transact_preverified_inner.execute,
-            true,
         );
         self.print_line(
-            "after_execute(transact_preverified_inner)",
+            "    after_execute(transact_preverified_inner)",
             self.record.revm_transact().transact_preverified_inner.after_execute,
-            true,
         );
-        self.print_line("handler_end", self.record.revm_transact().handle_end, true);
-        self.print_line("commit", self.record.commit_changes(), false);
-        self.print_line("add_receipt", self.record.add_receipt(), false);
+        self.print_line("    handler_end", self.record.revm_transact().handle_end);
+        self.print_line("commit", self.record.commit_changes());
+        self.print_line("add_receipt", self.record.add_receipt());
         self.print_line(
             "apply_post_execution_state_change",
             self.record.apply_post_execution_state_change(),
-            false,
         );
-        self.print_line("merge_transactions", self.record.merge_transactions(), false);
-        self.print_line("verify_receipt", self.record.verify_receipt(), false);
-        self.print_line("save receipts", self.record.save_receipts(), false);
+        self.print_line("merge_transactions", self.record.merge_transactions());
+        self.print_line("verify_receipt", self.record.verify_receipt());
+        self.print_line("save receipts", self.record.save_receipts());
 
         println!();
     }
 
-    fn print_line(&self, cat: &str, cycles: u64, is_sub: bool) {
+    fn print_line(&self, cat: &str, cycles: u64) {
         let time = cycles_as_secs(cycles);
         let pct = time / cycles_as_secs(self.record.total());
 
-        if is_sub {
-            println!(
-                "{: >COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}",
-                cat,
-                time,
-                pct * 100.0,
-            );
-        } else {
-            println!(
-                "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}",
-                cat,
-                time,
-                pct * 100.0,
-            );
-        }
+        println!(
+            "{:<COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}",
+            cat,
+            time,
+            pct * 100.0,
+        );
     }
 }
 
@@ -799,9 +799,9 @@ impl WriteToDbDisplayer {
 
         // print
         println!();
-        println!("=================================================Breakdown of write_to_db ===============================================");
+        println!("=================================================Breakdown of write_to_db ==========================================");
         println!(
-            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_LARGE$}",
+            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_BIG$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_BIG$}",
             "Category",  
             "Size (MB)",   
             "Time (s)",    
@@ -816,12 +816,12 @@ impl WriteToDbDisplayer {
             revert_storage_time,
         );
         self.print_line(
-            "write storage iter time (revert state)",
+            "    write storage iter time (revert state)",
             None,
             revert_storage_time - revert_storage_append_time,
         );
         self.print_line(
-            "write storage append time (revert state)",
+            "    write storage append time (revert state)",
             Some(revert_storage_size),
             revert_storage_append_time,
         );
@@ -831,23 +831,23 @@ impl WriteToDbDisplayer {
             revert_account_time,
         );
         self.print_line(
-            "write account iter time (revert state)",
+            "    write account iter time (revert state)",
             None,
             revert_account_time - revert_account_append_time,
         );
         self.print_line(
-            "write account append time (revert state)",
+            "    write account append time (revert state)",
             Some(revert_account_size),
             revert_account_append_time,
         );
         self.print_line("write_receipts", Some(write_receipts_size), write_receipts_time);
         self.print_line(
-            "write receipts iter time",
+            "    write receipts iter time",
             None,
             write_receipts_time - receipts_append_time,
         );
         self.print_line(
-            "write receipts append time",
+            "    write receipts append time",
             Some(write_receipts_size),
             receipts_append_time,
         );
@@ -858,12 +858,12 @@ impl WriteToDbDisplayer {
             state_account_time,
         );
         self.print_line(
-            "write account iter time (state changes)",
+            "    write account iter time (state changes)",
             None,
             state_account_time - state_account_upsert_time,
         );
         self.print_line(
-            "write account upsert time (state changes)",
+            "    write account upsert time (state changes)",
             Some(state_account_size),
             state_account_upsert_time,
         );
@@ -873,12 +873,12 @@ impl WriteToDbDisplayer {
             state_bytecode_time,
         );
         self.print_line(
-            "write bytecode iter time (state changes)",
+            "    write bytecode iter time (state changes)",
             None,
             state_bytecode_time - state_bytecode_upsert_time,
         );
         self.print_line(
-            "write bytecode upsert time (state changes)",
+            "    write bytecode upsert time (state changes)",
             Some(state_bytecode_size),
             state_bytecode_upsert_time,
         );
@@ -888,12 +888,12 @@ impl WriteToDbDisplayer {
             state_storage_time,
         );
         self.print_line(
-            "write storage iter time (state_changes)",
+            "    write storage iter time (state_changes)",
             None,
             state_storage_time - state_storage_upsert_time,
         );
         self.print_line(
-            "write storage upsert time (state_changes)",
+            "    write storage upsert time (state_changes)",
             Some(state_storage_size),
             state_storage_upsert_time,
         );
@@ -905,7 +905,7 @@ impl WriteToDbDisplayer {
 
         if size.is_none() {
             println!(
-                "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$.3}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}{: >COL_WIDTH_LARGE$.3}",
+                "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_BIG$.3}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}{: >COL_WIDTH_BIG$.3}",
                 cat,
                 "NAN",   
                 time,
@@ -920,7 +920,7 @@ impl WriteToDbDisplayer {
         let rate = size / time;
 
         println!(
-            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_LARGE$.3}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}{: >COL_WIDTH_LARGE$.3}",
+            "{: <COL_WIDTH_LARGE$}{: >COL_WIDTH_BIG$.3}{: >COL_WIDTH_MIDDLE$.3}{: >COL_WIDTH_MIDDLE$.2}{: >COL_WIDTH_BIG$.3}",
             cat,
             size,
             time,

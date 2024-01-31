@@ -99,11 +99,11 @@ impl DashboardListener {
                 );
             }
             #[cfg(feature = "enable_tps_gas_record")]
-            MetricEvent::BlockTpsAndGasSwitch { switch } => {
+            MetricEvent::BlockTpsAndGasSwitch { block_number, switch } => {
                 if switch {
                     self.tps_gas_displayer.start_record();
                 } else {
-                    self.tps_gas_displayer.stop_record();
+                    self.tps_gas_displayer.stop_record(block_number);
                 }
             }
             #[cfg(feature = "enable_db_speed_record")]
@@ -117,8 +117,8 @@ impl DashboardListener {
                 self.revm_metric_displayer.print();
             }
             #[cfg(feature = "enable_cache_record")]
-            MetricEvent::CacheDbInfo { size, record } => {
-                self.cache_db_displayer.update_cachedb_record(size, record);
+            MetricEvent::CacheDbInfo { block_number, size, record } => {
+                self.cache_db_displayer.update_cachedb_record(block_number, size, record);
                 self.cache_db_displayer.print();
             }
             #[cfg(feature = "enable_execute_measure")]
