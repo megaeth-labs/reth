@@ -36,7 +36,7 @@ where
     ) -> Result<Option<(Vec<u8>, BranchNodeCompact)>, DatabaseError> {
         let seek_by_key_subkey = {
             #[cfg(feature = "enable_state_root_record")]
-            let _seek_by_key_subkey = perf_metrics::DBWalkerSeekExactRead::default();
+            let _seek_by_key_subkey = perf_metrics::DBStorageTrieSeekBySubKeyRead::default();
 
             self.cursor.seek_by_key_subkey(self.hashed_address, key.clone())
         };
@@ -52,7 +52,7 @@ where
     ) -> Result<Option<(Vec<u8>, BranchNodeCompact)>, DatabaseError> {
         let seek_by_key_subkey = {
             #[cfg(feature = "enable_state_root_record")]
-            let _seek_by_key_subkey = perf_metrics::DBWalkerSeekRead::default();
+            let _seek_by_key_subkey = perf_metrics::DBStorageTrieSeekBySubKeyRead::default();
 
             self.cursor.seek_by_key_subkey(self.hashed_address, key)
         };
@@ -63,7 +63,7 @@ where
     fn current(&mut self) -> Result<Option<TrieKey>, DatabaseError> {
         let current = {
             #[cfg(feature = "enable_state_root_record")]
-            let _seek_by_key_subkey = perf_metrics::DBWalkerCurrentRead::default();
+            let _current = perf_metrics::DBStorageTrieCurrentRead::default();
 
             self.cursor.current()
         };

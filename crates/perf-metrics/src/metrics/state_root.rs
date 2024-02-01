@@ -17,12 +17,16 @@ pub struct DBRead {
     pub(crate) next_dup_val_count: u64,
     pub(crate) next_dup_val: u64,
 
-    pub(crate) walker_seek_count: u64,
-    pub(crate) walker_seek: u64,
-    pub(crate) walker_seek_exact_count: u64,
-    pub(crate) walker_seek_exact: u64,
-    pub(crate) walker_current_count: u64,
-    pub(crate) walker_current: u64,
+    pub(crate) account_trie_seek_count: u64,
+    pub(crate) account_trie_seek: u64,
+    pub(crate) account_trie_seek_exact_count: u64,
+    pub(crate) account_trie_seek_exact: u64,
+    pub(crate) account_trie_current_count: u64,
+    pub(crate) account_trie_current: u64,
+    pub(crate) storage_trie_seek_by_subkey_count: u64,
+    pub(crate) storage_trie_seek_by_subkey: u64,
+    pub(crate) storage_trie_current_count: u64,
+    pub(crate) storage_trie_current: u64,
 
     pub(crate) hash_account_cursor_seek_hit_count: u64,
     pub(crate) hash_storage_cursor_seek_hit_count: u64,
@@ -43,12 +47,16 @@ impl DBRead {
         self.add_next_dup_val_count(other.next_dup_val_count);
         self.add_next_dup_val(other.next_dup_val);
 
-        self.add_walker_seek_count(other.walker_seek_count);
-        self.add_walker_seek(other.walker_seek);
-        self.add_walker_seek_exact_count(other.walker_seek_exact_count);
-        self.add_walker_seek_exact(other.walker_seek_exact);
-        self.add_walker_current_count(other.walker_current_count);
-        self.add_walker_current(other.walker_current);
+        self.add_account_trie_seek_count(other.account_trie_seek_count);
+        self.add_account_trie_seek(other.account_trie_seek);
+        self.add_account_trie_seek_exact_count(other.account_trie_seek_exact_count);
+        self.add_account_trie_seek_exact(other.account_trie_seek_exact);
+        self.add_account_trie_current_count(other.account_trie_current_count);
+        self.add_account_trie_current(other.account_trie_current);
+        self.add_storage_trie_seek_by_key_subkey_count(other.storage_trie_seek_by_subkey_count);
+        self.add_storage_trie_seek_by_key_subkey(other.storage_trie_seek_by_subkey);
+        self.add_storage_trie_current_count(other.storage_trie_current_count);
+        self.add_storage_trie_current(other.storage_trie_current);
 
         self.add_hash_account_cursor_seek_hit_count(other.hash_account_cursor_seek_hit_count);
         self.add_hash_storage_cursor_seek_hit_count(other.hash_storage_cursor_seek_hit_count);
@@ -103,29 +111,53 @@ impl DBRead {
         self.next_dup_val = self.next_dup_val.checked_add(time_cycles).expect("overflow");
     }
 
-    pub(crate) fn add_walker_seek_count(&mut self, count: u64) {
-        self.walker_seek_count = self.walker_seek_count.checked_add(count).expect("overflow");
+    pub(crate) fn add_account_trie_seek_count(&mut self, count: u64) {
+        self.account_trie_seek_count =
+            self.account_trie_seek_count.checked_add(count).expect("overflow");
     }
 
-    pub(crate) fn add_walker_seek(&mut self, time_cycles: u64) {
-        self.walker_seek = self.walker_seek.checked_add(time_cycles).expect("overflow");
+    pub(crate) fn add_account_trie_seek(&mut self, time_cycles: u64) {
+        self.account_trie_seek = self.account_trie_seek.checked_add(time_cycles).expect("overflow");
     }
 
-    pub(crate) fn add_walker_seek_exact_count(&mut self, count: u64) {
-        self.walker_seek_exact_count =
-            self.walker_seek_exact_count.checked_add(count).expect("overflow");
+    pub(crate) fn add_account_trie_seek_exact_count(&mut self, count: u64) {
+        self.account_trie_seek_exact_count =
+            self.account_trie_seek_exact_count.checked_add(count).expect("overflow");
     }
 
-    pub(crate) fn add_walker_seek_exact(&mut self, time_cycles: u64) {
-        self.walker_seek_exact = self.walker_seek_exact.checked_add(time_cycles).expect("overflow");
+    pub(crate) fn add_account_trie_seek_exact(&mut self, time_cycles: u64) {
+        self.account_trie_seek_exact =
+            self.account_trie_seek_exact.checked_add(time_cycles).expect("overflow");
     }
 
-    pub(crate) fn add_walker_current_count(&mut self, count: u64) {
-        self.walker_current_count = self.walker_current_count.checked_add(count).expect("overflow");
+    pub(crate) fn add_account_trie_current_count(&mut self, count: u64) {
+        self.account_trie_current_count =
+            self.account_trie_current_count.checked_add(count).expect("overflow");
     }
 
-    pub(crate) fn add_walker_current(&mut self, time_cycles: u64) {
-        self.walker_current = self.walker_current.checked_add(time_cycles).expect("overflow");
+    pub(crate) fn add_account_trie_current(&mut self, time_cycles: u64) {
+        self.account_trie_current =
+            self.account_trie_current.checked_add(time_cycles).expect("overflow");
+    }
+
+    pub(crate) fn add_storage_trie_seek_by_key_subkey_count(&mut self, count: u64) {
+        self.storage_trie_seek_by_subkey_count =
+            self.storage_trie_seek_by_subkey_count.checked_add(count).expect("overflow");
+    }
+
+    pub(crate) fn add_storage_trie_seek_by_key_subkey(&mut self, time_cycles: u64) {
+        self.storage_trie_seek_by_subkey =
+            self.storage_trie_seek_by_subkey.checked_add(time_cycles).expect("overflow");
+    }
+
+    pub(crate) fn add_storage_trie_current_count(&mut self, count: u64) {
+        self.storage_trie_current_count =
+            self.storage_trie_current_count.checked_add(count).expect("overflow");
+    }
+
+    pub(crate) fn add_storage_trie_current(&mut self, time_cycles: u64) {
+        self.storage_trie_current =
+            self.storage_trie_current.checked_add(time_cycles).expect("overflow");
     }
 
     pub(crate) fn add_hash_account_cursor_seek_hit_count(&mut self, count: u64) {
@@ -136,6 +168,58 @@ impl DBRead {
     pub(crate) fn add_hash_storage_cursor_seek_hit_count(&mut self, count: u64) {
         self.hash_storage_cursor_seek_hit_count =
             self.hash_storage_cursor_seek_hit_count.checked_add(count).expect("overflow");
+    }
+
+    pub(crate) fn hash_account_table_count(&self) -> u64 {
+        self.current_count
+            .checked_add(self.next_count)
+            .and_then(|x| x.checked_add(self.seek_count))
+            .expect("overflow")
+    }
+
+    pub(crate) fn hash_account_table_time(&self) -> u64 {
+        self.current
+            .checked_add(self.next)
+            .and_then(|x| x.checked_add(self.seek))
+            .expect("overflow")
+    }
+
+    pub(crate) fn hash_storage_table_count(&self) -> u64 {
+        self.seek_exact_count
+            .checked_add(self.seek_by_sub_key_count)
+            .and_then(|x| x.checked_add(self.next_dup_val_count))
+            .expect("overflow")
+    }
+
+    pub(crate) fn hash_storage_table_time(&self) -> u64 {
+        self.seek_exact
+            .checked_add(self.seek_by_sub_key)
+            .and_then(|x| x.checked_add(self.next_dup_val))
+            .expect("overflow")
+    }
+
+    pub(crate) fn account_trie_table_count(&self) -> u64 {
+        self.account_trie_seek_count
+            .checked_add(self.account_trie_seek_exact_count)
+            .and_then(|x| x.checked_add(self.account_trie_current_count))
+            .expect("overflow")
+    }
+
+    pub(crate) fn account_trie_table_time(&self) -> u64 {
+        self.account_trie_seek
+            .checked_add(self.account_trie_seek_exact)
+            .and_then(|x| x.checked_add(self.account_trie_current))
+            .expect("overflow")
+    }
+
+    pub(crate) fn storage_trie_table_count(&self) -> u64 {
+        self.storage_trie_seek_by_subkey_count
+            .checked_add(self.storage_trie_current_count)
+            .expect("overflow")
+    }
+
+    pub(crate) fn storage_trie_table_time(&self) -> u64 {
+        self.storage_trie_seek_by_subkey.checked_add(self.storage_trie_current).expect("overflow")
     }
 
     pub(crate) fn leaf_table_count(&self) -> u64 {
@@ -159,42 +243,50 @@ impl DBRead {
     }
 
     pub(crate) fn branch_table_count(&self) -> u64 {
-        self.walker_seek_count
-            .checked_add(self.walker_seek_exact_count)
-            .and_then(|x| x.checked_add(self.walker_current_count))
+        self.account_trie_seek_count
+            .checked_add(self.account_trie_seek_exact_count)
+            .and_then(|x| x.checked_add(self.account_trie_current_count))
+            .and_then(|x| x.checked_add(self.storage_trie_seek_by_subkey_count))
+            .and_then(|x| x.checked_add(self.storage_trie_current_count))
             .expect("overflow")
     }
 
     pub(crate) fn branch_table_time(&self) -> u64 {
-        self.walker_seek
-            .checked_add(self.walker_seek_exact)
-            .and_then(|x| x.checked_add(self.walker_current))
+        self.account_trie_seek
+            .checked_add(self.account_trie_seek_exact)
+            .and_then(|x| x.checked_add(self.account_trie_current))
+            .and_then(|x| x.checked_add(self.storage_trie_seek_by_subkey))
+            .and_then(|x| x.checked_add(self.storage_trie_current))
             .expect("overflow")
     }
 
     pub(crate) fn total_count(&self) -> u64 {
         self.current_count
             .checked_add(self.next_count)
-            .and_then(|x| x.checked_add(self.next_dup_val_count))
             .and_then(|x| x.checked_add(self.seek_count))
+            .and_then(|x| x.checked_add(self.next_dup_val_count))
             .and_then(|x| x.checked_add(self.seek_by_sub_key_count))
             .and_then(|x| x.checked_add(self.seek_exact_count))
-            .and_then(|x| x.checked_add(self.walker_seek_count))
-            .and_then(|x| x.checked_add(self.walker_seek_exact_count))
-            .and_then(|x| x.checked_add(self.walker_current_count))
+            .and_then(|x| x.checked_add(self.account_trie_seek_count))
+            .and_then(|x| x.checked_add(self.account_trie_seek_exact_count))
+            .and_then(|x| x.checked_add(self.account_trie_current_count))
+            .and_then(|x| x.checked_add(self.storage_trie_seek_by_subkey_count))
+            .and_then(|x| x.checked_add(self.storage_trie_current_count))
             .expect("overflow")
     }
 
     pub(crate) fn total_time(&self) -> u64 {
         self.current
             .checked_add(self.next)
-            .and_then(|x| x.checked_add(self.next_dup_val))
             .and_then(|x| x.checked_add(self.seek))
+            .and_then(|x| x.checked_add(self.next_dup_val))
             .and_then(|x| x.checked_add(self.seek_by_sub_key))
             .and_then(|x| x.checked_add(self.seek_exact))
-            .and_then(|x| x.checked_add(self.walker_seek))
-            .and_then(|x| x.checked_add(self.walker_seek_exact))
-            .and_then(|x| x.checked_add(self.walker_current))
+            .and_then(|x| x.checked_add(self.account_trie_seek))
+            .and_then(|x| x.checked_add(self.account_trie_seek_exact))
+            .and_then(|x| x.checked_add(self.account_trie_current))
+            .and_then(|x| x.checked_add(self.storage_trie_seek_by_subkey))
+            .and_then(|x| x.checked_add(self.storage_trie_current))
             .expect("overflow")
     }
 }
@@ -206,6 +298,9 @@ pub struct TryNextStat {
     pub(crate) skip_branch_node_count: u64,
     pub(crate) leaf_miss_count: u64,
     pub(crate) leaf_hit_count: u64,
+    pub(crate) walk_next_unprocessed_key_count: u64,
+    pub(crate) walk_advance_count: u64,
+    pub(crate) loop_count: u64,
 }
 
 impl TryNextStat {
@@ -215,6 +310,9 @@ impl TryNextStat {
         self.add_skip_branch_node_count(other.skip_branch_node_count);
         self.add_leaf_miss_count(other.leaf_miss_count);
         self.add_leaf_hit_count(other.leaf_hit_count);
+        self.add_walk_next_unprocessed_key_count(other.walk_next_unprocessed_key_count);
+        self.add_walk_advance_count(other.walk_advance_count);
+        self.add_loop_count(other.loop_count);
     }
 
     pub(crate) fn add_total_count(&mut self, count: u64) {
@@ -236,6 +334,19 @@ impl TryNextStat {
 
     pub(crate) fn add_leaf_hit_count(&mut self, count: u64) {
         self.leaf_hit_count = self.leaf_hit_count.checked_add(count).expect("overflow");
+    }
+
+    pub(crate) fn add_walk_next_unprocessed_key_count(&mut self, count: u64) {
+        self.walk_next_unprocessed_key_count =
+            self.walk_next_unprocessed_key_count.checked_add(count).expect("overflow");
+    }
+
+    pub(crate) fn add_walk_advance_count(&mut self, count: u64) {
+        self.walk_advance_count = self.walk_advance_count.checked_add(count).expect("overflow");
+    }
+
+    pub(crate) fn add_loop_count(&mut self, count: u64) {
+        self.loop_count = self.loop_count.checked_add(count).expect("overflow");
     }
 }
 
@@ -302,6 +413,18 @@ impl CaculateRecord {
 
     pub(crate) fn add_try_next_stat_leaf_hit_count(&mut self, count: u64) {
         self.try_next_stat.add_leaf_hit_count(count);
+    }
+
+    pub(crate) fn add_try_next_stat_walk_next_unprocessed_key_count(&mut self, count: u64) {
+        self.try_next_stat.add_walk_next_unprocessed_key_count(count);
+    }
+
+    pub(crate) fn add_try_next_stat_walk_advance_count(&mut self, count: u64) {
+        self.try_next_stat.add_walk_advance_count(count);
+    }
+
+    pub(crate) fn add_try_next_stat_loop_count(&mut self, count: u64) {
+        self.try_next_stat.add_loop_count(count);
     }
 
     pub(crate) fn add_add_branch_count(&mut self, count: u64) {
@@ -867,28 +990,44 @@ impl StateRootUpdateRecord {
         self.db_read.add_next_dup_val(time_cycles);
     }
 
-    pub(crate) fn add_db_walker_seek_count(&mut self, count: u64) {
-        self.db_read.add_walker_seek_count(count);
+    pub(crate) fn add_db_account_trie_seek_count(&mut self, count: u64) {
+        self.db_read.add_account_trie_seek_count(count);
     }
 
-    pub(crate) fn add_db_walker_seek(&mut self, time_cycles: u64) {
-        self.db_read.add_walker_seek(time_cycles);
+    pub(crate) fn add_db_account_trie_seek(&mut self, time_cycles: u64) {
+        self.db_read.add_account_trie_seek(time_cycles);
     }
 
-    pub(crate) fn add_db_walker_seek_exact_count(&mut self, count: u64) {
-        self.db_read.add_walker_seek_exact_count(count);
+    pub(crate) fn add_db_account_trie_seek_exact_count(&mut self, count: u64) {
+        self.db_read.add_account_trie_seek_exact_count(count);
     }
 
-    pub(crate) fn add_db_walker_seek_exact(&mut self, time_cycles: u64) {
-        self.db_read.add_walker_seek_exact(time_cycles);
+    pub(crate) fn add_db_account_trie_seek_exact(&mut self, time_cycles: u64) {
+        self.db_read.add_account_trie_seek_exact(time_cycles);
     }
 
-    pub(crate) fn add_db_walker_current_count(&mut self, count: u64) {
-        self.db_read.add_walker_current_count(count);
+    pub(crate) fn add_db_account_trie_current_count(&mut self, count: u64) {
+        self.db_read.add_account_trie_current_count(count);
     }
 
-    pub(crate) fn add_db_walker_current(&mut self, time_cycles: u64) {
-        self.db_read.add_walker_current(time_cycles);
+    pub(crate) fn add_db_account_trie_current(&mut self, time_cycles: u64) {
+        self.db_read.add_account_trie_current(time_cycles);
+    }
+
+    pub(crate) fn add_db_storage_trie_seek_by_key_subkey_count(&mut self, count: u64) {
+        self.db_read.add_storage_trie_seek_by_key_subkey_count(count);
+    }
+
+    pub(crate) fn add_db_storage_trie_seek_by_key_subkey(&mut self, time_cycles: u64) {
+        self.db_read.add_storage_trie_seek_by_key_subkey(time_cycles);
+    }
+
+    pub(crate) fn add_db_storage_trie_current_count(&mut self, count: u64) {
+        self.db_read.add_storage_trie_current_count(count);
+    }
+
+    pub(crate) fn add_db_storage_trie_current(&mut self, time_cycles: u64) {
+        self.db_read.add_storage_trie_current(time_cycles);
     }
 
     pub(crate) fn add_db_hash_account_cursor_seek_hit_count(&mut self, count: u64) {
@@ -934,6 +1073,18 @@ impl StateRootUpdateRecord {
         self.state_calculate_record.add_try_next_stat_leaf_hit_count(count);
     }
 
+    pub(crate) fn add_state_try_next_stat_walk_next_unprocessed_key_count(&mut self, count: u64) {
+        self.state_calculate_record.add_try_next_stat_walk_next_unprocessed_key_count(count);
+    }
+
+    pub(crate) fn add_state_try_next_stat_walk_advance_count(&mut self, count: u64) {
+        self.state_calculate_record.add_try_next_stat_walk_advance_count(count);
+    }
+
+    pub(crate) fn add_state_try_next_stat_loop_count(&mut self, count: u64) {
+        self.state_calculate_record.add_try_next_stat_loop_count(count);
+    }
+
     pub(crate) fn add_storage_try_next_stat_total_count(&mut self, count: u64) {
         self.storage_calculate_record.add_try_next_stat_count(count);
     }
@@ -952,6 +1103,18 @@ impl StateRootUpdateRecord {
 
     pub(crate) fn add_storage_try_next_stat_leaf_hit_count(&mut self, count: u64) {
         self.storage_calculate_record.add_try_next_stat_leaf_hit_count(count);
+    }
+
+    pub(crate) fn add_storage_try_next_stat_walk_next_unprocessed_key_count(&mut self, count: u64) {
+        self.storage_calculate_record.add_try_next_stat_walk_next_unprocessed_key_count(count);
+    }
+
+    pub(crate) fn add_storage_try_next_stat_walk_advance_count(&mut self, count: u64) {
+        self.storage_calculate_record.add_try_next_stat_walk_advance_count(count);
+    }
+
+    pub(crate) fn add_storage_try_next_stat_loop_count(&mut self, count: u64) {
+        self.storage_calculate_record.add_try_next_stat_loop_count(count);
     }
 
     pub(crate) fn add_state_try_next(&mut self, time_cycles: u64) {
@@ -1198,9 +1361,11 @@ counterRecorder!(DBNextRead | add_db_next);
 counterRecorder!(DBSeekExactRead | add_db_seek_exact);
 counterRecorder!(DBSeekBySubKeyRead | add_db_seek_by_sub_key);
 counterRecorder!(DBNextDupValRead | add_db_next_dup_val);
-counterRecorder!(DBWalkerSeekRead | add_db_walker_seek);
-counterRecorder!(DBWalkerSeekExactRead | add_db_walker_seek_exact);
-counterRecorder!(DBWalkerCurrentRead | add_db_walker_current);
+counterRecorder!(DBAccountTrieSeekRead | add_db_account_trie_seek);
+counterRecorder!(DBAccountTrieSeekExactRead | add_db_account_trie_seek_exact);
+counterRecorder!(DBAccountTrieCurrentRead | add_db_account_trie_current);
+counterRecorder!(DBStorageTrieSeekBySubKeyRead | add_db_storage_trie_seek_by_subkey);
+counterRecorder!(DBStorageTrieCurrentRead | add_db_storage_trie_current);
 
 pub struct Timer {
     start: Instant,

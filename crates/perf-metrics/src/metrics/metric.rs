@@ -925,37 +925,73 @@ pub fn add_db_next_dup_val(count: u64, time_cycles: u64) {
 }
 
 #[cfg(feature = "enable_state_root_record")]
-pub fn add_db_walker_seek(count: u64, time_cycles: u64) {
+pub fn add_db_account_trie_seek(count: u64, time_cycles: u64) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         if _record.state_root_update_record.is_dbswith_set() {
             _record.state_root_update_record.add_db_read_time(count, time_cycles);
-            _record.state_root_update_record.add_db_walker_seek_count(count);
-            _record.state_root_update_record.add_db_walker_seek(time_cycles);
+            _record.state_root_update_record.add_db_account_trie_seek_count(count);
+            _record.state_root_update_record.add_db_account_trie_seek(time_cycles);
         }
     }
 }
 
 #[cfg(feature = "enable_state_root_record")]
-pub fn add_db_walker_seek_exact(count: u64, time_cycles: u64) {
+pub fn add_db_account_trie_seek_exact(count: u64, time_cycles: u64) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         if _record.state_root_update_record.is_dbswith_set() {
             _record.state_root_update_record.add_db_read_time(count, time_cycles);
-            _record.state_root_update_record.add_db_walker_seek_exact_count(count);
-            _record.state_root_update_record.add_db_walker_seek_exact(time_cycles);
+            _record.state_root_update_record.add_db_account_trie_seek_exact_count(count);
+            _record.state_root_update_record.add_db_account_trie_seek_exact(time_cycles);
         }
     }
 }
 
 #[cfg(feature = "enable_state_root_record")]
-pub fn add_db_walker_current(count: u64, time_cycles: u64) {
+pub fn add_db_account_trie_current(count: u64, time_cycles: u64) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         if _record.state_root_update_record.is_dbswith_set() {
             _record.state_root_update_record.add_db_read_time(count, time_cycles);
-            _record.state_root_update_record.add_db_walker_current_count(count);
-            _record.state_root_update_record.add_db_walker_current(time_cycles);
+            _record.state_root_update_record.add_db_account_trie_current_count(count);
+            _record.state_root_update_record.add_db_account_trie_current(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_storage_trie_seek(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_account_trie_seek_count(count);
+            _record.state_root_update_record.add_db_account_trie_seek(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_storage_trie_seek_by_subkey(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_storage_trie_seek_by_key_subkey_count(count);
+            _record.state_root_update_record.add_db_storage_trie_seek_by_key_subkey(time_cycles);
+        }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_db_storage_trie_current(count: u64, time_cycles: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        if _record.state_root_update_record.is_dbswith_set() {
+            _record.state_root_update_record.add_db_read_time(count, time_cycles);
+            _record.state_root_update_record.add_db_storage_trie_current_count(count);
+            _record.state_root_update_record.add_db_storage_trie_current(time_cycles);
         }
     }
 }
@@ -1042,6 +1078,32 @@ pub fn add_state_try_next_stat_leaf_hit_count(count: u64) {
 }
 
 #[cfg(feature = "enable_state_root_record")]
+pub fn add_state_try_next_stat_walk_next_unprocessed_key_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record
+            .state_root_update_record
+            .add_state_try_next_stat_walk_next_unprocessed_key_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_try_next_stat_walk_advance_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_try_next_stat_walk_advance_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_state_try_next_stat_loop_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_try_next_stat_loop_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
 pub fn add_storage_try_next_stat_total_count_time(count: u64, time_cycles: u64) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
@@ -1071,6 +1133,32 @@ pub fn add_storage_try_next_stat_leaf_hit_count(count: u64) {
     unsafe {
         let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
         _record.state_root_update_record.add_storage_try_next_stat_leaf_hit_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_try_next_stat_walk_next_unprocessed_key_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record
+            .state_root_update_record
+            .add_storage_try_next_stat_walk_next_unprocessed_key_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_try_next_stat_walk_advance_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_try_next_stat_walk_advance_count(count);
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub fn add_storage_try_next_stat_loop_count(count: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_storage_try_next_stat_loop_count(count);
     }
 }
 

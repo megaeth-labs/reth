@@ -4,7 +4,11 @@ use super::opcode::*;
 use revm::OpCode;
 #[cfg(feature = "enable_opcode_metrics")]
 use revm_utils::metrics::types::OpcodeRecord;
-#[cfg(any(feature = "enable_opcode_metrics", feature = "enable_cache_record"))]
+#[cfg(any(
+    feature = "enable_opcode_metrics",
+    feature = "enable_cache_record",
+    feature = "enable_state_root_record"
+))]
 use revm_utils::time_utils::convert_cycles_to_ns_f64;
 
 #[cfg(feature = "enable_opcode_metrics")]
@@ -28,8 +32,6 @@ use crate::metrics::DatabaseOperationRecord;
 
 #[cfg(feature = "enable_state_root_record")]
 use crate::metrics::StateRootUpdateRecord;
-#[cfg(feature = "enable_state_root_record")]
-use revm_utils::time_utils::convert_cycles_to_ns_f64;
 
 #[cfg(feature = "enable_opcode_metrics")]
 const MGAS_TO_GAS: u64 = 1_000_000u64;
@@ -42,7 +44,11 @@ const MGAS_TO_GAS: u64 = 1_000_000u64;
     feature = "enable_state_root_record"
 ))]
 const COL_WIDTH_MIDDLE: usize = 14;
-#[cfg(any(feature = "enable_cache_record", feature = "enable_write_to_db_measure", feature = "enable_state_root_record",))]
+#[cfg(any(
+    feature = "enable_cache_record",
+    feature = "enable_write_to_db_measure",
+    feature = "enable_state_root_record",
+))]
 const COL_WIDTH_BIG: usize = 20;
 #[cfg(feature = "enable_state_root_record")]
 const COL_WIDTH_LITTLE_BIG: usize = 25;
@@ -905,26 +911,31 @@ impl StateRootUpdateDisplayer {
             convert_cycles_to_ns_f64(db_read.next_dup_val) / db_read.next_dup_val_count as f64,
         );
 
-        self.print_line_u64("walker_seek_count", db_read.walker_seek_count);
-        self.print_line_f64("walker_seek(s)", cycles_as_secs(db_read.walker_seek));
+        self.print_line_u64("walker_seek_count", db_read.account_trie_seek_count);
+        self.print_line_f64("walker_seek(s)", cycles_as_secs(db_read.account_trie_seek));
         self.print_line_f64(
             "avg_walker_seek(ns)",
-            convert_cycles_to_ns_f64(db_read.walker_seek) / db_read.walker_seek_count as f64,
+            convert_cycles_to_ns_f64(db_read.account_trie_seek) /
+                db_read.account_trie_seek_count as f64,
         );
 
-        self.print_line_u64("walker_seek_exact_count", db_read.walker_seek_exact_count);
-        self.print_line_f64("walker_seek_exact(s)", cycles_as_secs(db_read.walker_seek_exact));
+        self.print_line_u64("walker_seek_exact_count", db_read.account_trie_seek_exact_count);
+        self.print_line_f64(
+            "walker_seek_exact(s)",
+            cycles_as_secs(db_read.account_trie_seek_exact),
+        );
         self.print_line_f64(
             "avg_walker_seek_exact(ns)",
-            convert_cycles_to_ns_f64(db_read.walker_seek_exact) /
-                db_read.walker_seek_exact_count as f64,
+            convert_cycles_to_ns_f64(db_read.account_trie_seek_exact) /
+                db_read.account_trie_seek_exact_count as f64,
         );
 
-        self.print_line_u64("walker_current_count", db_read.walker_current_count);
-        self.print_line_f64("walker_current(s)", cycles_as_secs(db_read.walker_current));
+        self.print_line_u64("walker_current_count", db_read.account_trie_current_count);
+        self.print_line_f64("walker_current(s)", cycles_as_secs(db_read.account_trie_current));
         self.print_line_f64(
             "avg_walker_current(ns)",
-            convert_cycles_to_ns_f64(db_read.walker_current) / db_read.walker_current_count as f64,
+            convert_cycles_to_ns_f64(db_read.account_trie_current) /
+                db_read.account_trie_current_count as f64,
         );
 
         println!("");
@@ -947,7 +958,7 @@ impl StateRootUpdateDisplayer {
     pub(crate) fn print_breakdown_funtion(&self) {
         println!("");
         println!("");
-        println!("=========================Breakdown of Function==========================");
+        println!("============================Breakdown of Function===========================");
         println!(
             "{:COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
             "Category", "Time (s)", "Time (%)"
@@ -1037,7 +1048,7 @@ impl StateRootUpdateDisplayer {
 
         println!("");
         println!("");
-        println!("===================Breakdown of StateRoot.calculate====================");
+        println!("======================Breakdown of StateRoot.calculate======================");
         println!(
             "{:COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
             "Category", "Time (s)", "Time (%)"
@@ -1124,7 +1135,87 @@ impl StateRootUpdateDisplayer {
 
         println!("");
         println!("");
-        println!("===================Breakdown of StorageRoot.calculate==================");
+
+        // println!("================================= category =================================");
+        println!("=================Breakdown of StateRoot.calculate category==================");
+        println!(
+            "{:COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
+            "Category", "Time (s)", "Time (%)"
+        );
+        let total_try_next = state_calculate
+            .try_next_stat
+            .total_time
+            .checked_add(storage_calculate.try_next_stat.total_time)
+            .expect("overflow");
+
+        let add_branch_time =
+            state_calculate.add_branch.checked_add(storage_calculate.add_branch).expect("overflow");
+        let add_leaf_time =
+            state_calculate.add_leaf.checked_add(storage_calculate.add_leaf).expect("overflow");
+        let root_time =
+            state_calculate.add_root.checked_add(storage_calculate.add_root).expect("overflow");
+
+        let other_time = state_calculate
+            .total_time
+            .checked_sub(total_try_next)
+            .and_then(|x| x.checked_sub(add_branch_time))
+            .and_then(|x| x.checked_sub(add_leaf_time))
+            .and_then(|x| x.checked_sub(root_time))
+            .expect("overflow");
+
+        self.print_time_line("total", state_calculate.total_time, state_calculate.total_time);
+        self.print_time_line("other", other_time, state_calculate.total_time);
+        self.print_time_line("try_next", total_try_next, state_calculate.total_time);
+        self.print_time_line(
+            "    AccountNodeIter.try_next(StateRoot)",
+            state_calculate.try_next_stat.total_time,
+            state_calculate.total_time,
+        );
+        self.print_time_line(
+            "    StorageNodeIter.try_next(StorageRoot)",
+            storage_calculate.try_next_stat.total_time,
+            state_calculate.total_time,
+        );
+
+        self.print_time_line("add_branch", add_branch_time, state_calculate.total_time);
+        self.print_time_line(
+            "    HashBuilder.add_branch(StateRoot)",
+            state_calculate.add_branch,
+            state_calculate.total_time,
+        );
+        self.print_time_line(
+            "    HashBuilder.add_branch(StorageRoot)",
+            storage_calculate.add_branch,
+            state_calculate.total_time,
+        );
+
+        self.print_time_line("add_leaf", add_leaf_time, state_calculate.total_time);
+        self.print_time_line(
+            "    HashBuilder.add_leaf(StateRoot)",
+            state_calculate.add_leaf,
+            state_calculate.total_time,
+        );
+        self.print_time_line(
+            "    HashBuilder.add_leaf(StorageRoot)",
+            storage_calculate.add_leaf,
+            state_calculate.total_time,
+        );
+
+        self.print_time_line("root", root_time, state_calculate.total_time);
+        self.print_time_line(
+            "    HashBuilder.root(StateRoot)",
+            state_calculate.add_root,
+            state_calculate.total_time,
+        );
+        self.print_time_line(
+            "    HashBuilder.root(StorageRoot)",
+            storage_calculate.add_root,
+            state_calculate.total_time,
+        );
+
+        println!("");
+        println!("");
+        println!("=====================Breakdown of StorageRoot.calculate=====================");
         println!(
             "{:COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
             "Category", "Time (s)", "Time (%)"
@@ -1226,7 +1317,7 @@ impl StateRootUpdateDisplayer {
     pub(crate) fn print_try_next_read_node(&self) {
         println!("");
         println!("");
-        println!("====================== metric of try_next read node ====================");
+        println!("============================ metric of read node ===========================");
         println!(
             "{:COL_WIDTH_LARGE$}{: >COL_WIDTH_MIDDLE$}{: >COL_WIDTH_MIDDLE$}",
             "Category", "Count", "Count (%)"
@@ -1262,51 +1353,65 @@ impl StateRootUpdateDisplayer {
         let total_node = branch_node.checked_add(leaf_node).expect("overflow");
 
         self.print_count_line("total", total_node, total_node);
-        self.print_count_line("branch node", branch_node, total_node);
-        self.print_count_line("    not_updated_branch_node", not_updated_branch_node, total_node);
+        self.print_count_line("branch_nodes", branch_node, total_node);
+        self.print_count_line("    ro_branch_nodes", not_updated_branch_node, total_node);
         self.print_count_line(
-            "        accountTrie branch",
+            "        accountTrie",
             state_calculate.try_next_stat.skip_branch_node_count,
             total_node,
         );
 
         self.print_count_line(
-            "        storageTrie branch",
+            "        storageTrie",
             storage_calculate.try_next_stat.skip_branch_node_count,
             total_node,
         );
 
         self.print_count_line(
-            "    updated_branch_node",
+            "    updated_branch_nodes",
             self.record.mpt_delete_branch_number(),
             total_node,
         );
 
-        self.print_count_line("leaf node", leaf_node, total_node);
+        self.print_count_line("leaf_nodes", leaf_node, total_node);
         self.print_count_line("    boundary_reading_leaf", boundary_reading_leaf, total_node);
         self.print_count_line(
-            "        accountTrie leaf",
+            "        accountTrie",
             state_calculate.try_next_stat.leaf_miss_count,
             total_node,
         );
         self.print_count_line(
-            "        storageTrie leaf",
+            "        storageTrie",
             storage_calculate.try_next_stat.leaf_miss_count,
             total_node,
         );
 
         self.print_count_line("    work_leaf", work_leaf, total_node);
-        self.print_count_line(
-            "        accountTrie leaf",
-            state_calculate.try_next_stat.leaf_hit_count,
-            total_node,
-        );
 
-        self.print_count_line(
-            "        storageTrie leaf",
-            storage_calculate.try_next_stat.leaf_hit_count,
-            total_node,
-        );
+        let account_update_leaves = self.record.account_changes();
+        let storage_update_leaves = self.record.storage_changes();
+
+        let account_ro_leaves = state_calculate
+            .try_next_stat
+            .leaf_hit_count
+            .checked_sub(account_update_leaves)
+            .expect("overflow");
+        let storage_ro_leaves = storage_calculate
+            .try_next_stat
+            .leaf_hit_count
+            .checked_sub(storage_update_leaves)
+            .expect("overflow");
+
+        let ro_leaves = account_ro_leaves.checked_add(storage_ro_leaves).expect("overflow");
+        self.print_count_line("        ro_leaves", ro_leaves, total_node);
+        self.print_count_line("            accountTrie", account_ro_leaves, total_node);
+        self.print_count_line("            storageTrie", storage_ro_leaves, total_node);
+
+        let update_leaves =
+            account_update_leaves.checked_add(storage_update_leaves).expect("overflow");
+        self.print_count_line("        updated_leaves", update_leaves, total_node);
+        self.print_count_line("            accountTrie", account_update_leaves, total_node);
+        self.print_count_line("            storageTrie", storage_update_leaves, total_node);
 
         println!("");
         println!("");
@@ -1586,80 +1691,124 @@ impl StateRootUpdateDisplayer {
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "leaf table",
+            "leaf_table",
             db_read.leaf_table_count(),
             total_count,
             db_read.leaf_table_time(),
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "    current",
+            "    HA",
+            db_read.hash_account_table_count(),
+            total_count,
+            db_read.hash_account_table_time(),
+            total_time_cycles,
+        );
+
+        self.print_metric_db_cat_line(
+            "        current",
             db_read.current_count,
             total_count,
             db_read.current,
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "    seek",
+            "        seek",
             db_read.seek_count,
             total_count,
             db_read.seek,
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "    next",
+            "        next",
             db_read.next_count,
             total_count,
             db_read.next,
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "    seek_exact",
+            "    HS",
+            db_read.hash_storage_table_count(),
+            total_count,
+            db_read.hash_storage_table_time(),
+            total_time_cycles,
+        );
+        self.print_metric_db_cat_line(
+            "        seek_exact",
             db_read.seek_exact_count,
             total_count,
             db_read.seek_exact,
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "    seek_by_sub_key",
+            "        seek_by_sub_key",
             db_read.seek_by_sub_key_count,
             total_count,
             db_read.seek_by_sub_key,
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "    next_dup_val",
+            "        next_dup_val",
             db_read.next_dup_val_count,
             total_count,
             db_read.next_dup_val,
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "branch table",
+            "branch_table",
             db_read.branch_table_count(),
             total_count,
             db_read.branch_table_time(),
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "    current(walker)",
-            db_read.walker_current_count,
+            "    AT",
+            db_read.account_trie_table_count(),
             total_count,
-            db_read.walker_current,
+            db_read.account_trie_table_time(),
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "    seek(walker)",
-            db_read.walker_seek_count,
+            "        current",
+            db_read.account_trie_current_count,
             total_count,
-            db_read.walker_seek,
+            db_read.account_trie_current,
             total_time_cycles,
         );
         self.print_metric_db_cat_line(
-            "    seek_exact(walker)",
-            db_read.walker_seek_exact_count,
+            "        seek",
+            db_read.account_trie_seek_count,
             total_count,
-            db_read.walker_seek_exact,
+            db_read.account_trie_seek,
+            total_time_cycles,
+        );
+        self.print_metric_db_cat_line(
+            "        seek_exact",
+            db_read.account_trie_seek_exact_count,
+            total_count,
+            db_read.account_trie_seek_exact,
+            total_time_cycles,
+        );
+
+        self.print_metric_db_cat_line(
+            "    ST",
+            db_read.storage_trie_table_count(),
+            total_count,
+            db_read.storage_trie_table_time(),
+            total_time_cycles,
+        );
+        self.print_metric_db_cat_line(
+            "        seek_by_subkey",
+            db_read.storage_trie_seek_by_subkey_count,
+            total_count,
+            db_read.storage_trie_seek_by_subkey,
+            total_time_cycles,
+        );
+        self.print_metric_db_cat_line(
+            "        current",
+            db_read.storage_trie_current_count,
+            total_count,
+            db_read.storage_trie_current,
             total_time_cycles,
         );
 

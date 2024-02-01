@@ -26,7 +26,7 @@ where
     ) -> Result<Option<(Vec<u8>, BranchNodeCompact)>, DatabaseError> {
         let seek_exact = {
             #[cfg(feature = "enable_state_root_record")]
-            let _walker_seek_exact = perf_metrics::DBWalkerSeekExactRead::default();
+            let _walker_seek_exact = perf_metrics::DBAccountTrieSeekExactRead::default();
 
             self.0.seek_exact(key)
         };
@@ -39,7 +39,7 @@ where
     ) -> Result<Option<(Vec<u8>, BranchNodeCompact)>, DatabaseError> {
         let seek = {
             #[cfg(feature = "enable_state_root_record")]
-            let _walker_seek_exact = perf_metrics::DBWalkerSeekRead::default();
+            let _walker_seek = perf_metrics::DBAccountTrieSeekRead::default();
 
             self.0.seek(key)
         };
@@ -49,7 +49,7 @@ where
     fn current(&mut self) -> Result<Option<TrieKey>, DatabaseError> {
         let current = {
             #[cfg(feature = "enable_state_root_record")]
-            let _walker_current = perf_metrics::DBWalkerCurrentRead::default();
+            let _walker_current = perf_metrics::DBAccountTrieCurrentRead::default();
 
             self.0.current()
         };

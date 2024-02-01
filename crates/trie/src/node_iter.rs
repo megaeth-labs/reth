@@ -90,6 +90,9 @@ where
             perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::StateTryNext);
 
         loop {
+            #[cfg(feature = "enable_state_root_record")]
+            perf_metrics::add_state_try_next_stat_loop_count(1);
+
             if let Some(key) = self.walker.key() {
                 if !self.current_walker_key_checked && self.previous_account_key.is_none() {
                     self.current_walker_key_checked = true;
@@ -128,12 +131,18 @@ where
                     self.current_hashed_entry = self.hashed_account_cursor.next()?;
                 }
                 None => {
+                    #[cfg(feature = "enable_state_root_record")]
+                    perf_metrics::add_state_try_next_stat_walk_next_unprocessed_key_count(1);
+
                     let seek_key = match self.walker.next_unprocessed_key() {
                         Some(key) => key,
                         None => break, // no more keys
                     };
                     self.current_hashed_entry = self.hashed_account_cursor.seek(seek_key)?;
                     self.walker.advance()?;
+
+                    #[cfg(feature = "enable_state_root_record")]
+                    perf_metrics::add_state_try_next_stat_walk_advance_count(1);
                 }
             }
         }
@@ -196,6 +205,9 @@ where
             perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::StorageTryNext);
 
         loop {
+            #[cfg(feature = "enable_state_root_record")]
+            perf_metrics::add_storage_try_next_stat_loop_count(1);
+
             if let Some(key) = self.walker.key() {
                 if !self.current_walker_key_checked {
                     self.current_walker_key_checked = true;
@@ -229,10 +241,16 @@ where
                 return Ok(Some(StorageNode::Leaf(hashed_key, value)))
             }
 
+            #[cfg(feature = "enable_state_root_record")]
+            perf_metrics::add_storage_try_next_stat_walk_next_unprocessed_key_count(1);
+
             let Some(seek_key) = self.walker.next_unprocessed_key() else { break };
             self.current_hashed_entry =
                 self.hashed_storage_cursor.seek(self.hashed_address, seek_key)?;
             self.walker.advance()?;
+
+            #[cfg(feature = "enable_state_root_record")]
+            perf_metrics::add_storage_try_next_stat_walk_advance_count(1);
         }
 
         Ok(None)
