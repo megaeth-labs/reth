@@ -55,7 +55,8 @@ const COL_WIDTH_LITTLE_BIG: usize = 25;
 #[cfg(any(
     feature = "enable_execution_duration_record",
     feature = "enable_execute_measure",
-    feature = "enable_write_to_db_measure"
+    feature = "enable_write_to_db_measure",
+    feature = "enable_state_root_record"
 ))]
 const COL_WIDTH_LARGE: usize = 48;
 
