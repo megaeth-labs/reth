@@ -383,12 +383,12 @@ impl BundleStateWithReceipts {
         tx: &TX,
         is_value_known: OriginalValuesKnown,
     ) -> Result<(), DatabaseError> {
+        #[cfg(feature = "enable_state_root_record")]
+        let _state_write_to_db = perf_metrics::StateWriteToDBRecord::default();
+
         #[cfg(feature = "enable_write_to_db_measure")]
         perf_metrics::start_write_to_db_record();
         let (plain_state, reverts) = self.bundle.into_plain_state_and_reverts(is_value_known);
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _state_write_to_db = perf_metrics::StateWriteToDBRecord::default();
 
         StateReverts(reverts).write_to_db(tx, self.first_block)?;
 
