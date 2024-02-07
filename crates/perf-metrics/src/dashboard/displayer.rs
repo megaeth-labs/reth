@@ -404,10 +404,13 @@ impl RevmMetricTimeDisplayer {
 #[derive(Default, Debug)]
 pub(crate) struct ExecutionDurationDisplayer {
     record: ExecutionDurationRecord,
+    last_print_block_number: u64,
 }
 
 #[cfg(feature = "enable_execution_duration_record")]
 impl ExecutionDurationDisplayer {
+    const N: u64 = 1000;
+
     pub(crate) fn update_excution_duration_record(&mut self, record: ExecutionDurationRecord) {
         self.record = record;
     }
@@ -425,7 +428,17 @@ impl ExecutionDurationDisplayer {
     }
 
     /// print the information of the execution duration record.
-    pub(crate) fn print(&self) {
+    pub(crate) fn print(&mut self, block_number: u64) {
+        if self.last_print_block_number == u64::default() {
+            self.last_print_block_number = block_number;
+        }
+
+        let interval = block_number.checked_sub(self.last_print_block_number).expect("overflow");
+        if interval < Self::N && 0 != block_number % Self::N {
+            return
+        }
+        self.last_print_block_number = block_number;
+
         println!();
         println!("=========================Breakdown of ExecutionStage========================");
         println!(
@@ -635,6 +648,9 @@ pub(crate) struct TpsAndGasRecordDisplayer {
     last_txs: u128,
     last_gas: u128,
     pre_instant: minstant::Instant,
+
+    timer_switch: bool,
+    last_print_block_number: u64,
 }
 
 #[cfg(feature = "enable_tps_gas_record")]
@@ -642,22 +658,35 @@ impl TpsAndGasRecordDisplayer {
     const N: u64 = 1000;
 
     pub(crate) fn update_tps_and_gas(&mut self, block_number: u64, txs: u128, gas: u128) {
-        if 0 == block_number % Self::N {
+        // if 0 == block_number % Self::N {
+        //     self.print(block_number, txs, gas);
+        // }
+        if self.last_print_block_number == u64::default() {
+            self.last_print_block_number = block_number;
+        }
+
+        let interval = block_number.checked_sub(self.last_print_block_number).expect("overflow");
+        if interval >= Self::N || 0 == block_number % Self::N {
             self.print(block_number, txs, gas);
+            self.last_print_block_number = block_number;
         }
 
         self.last_txs = txs;
         self.last_gas = gas;
     }
 
-    pub(crate) fn start_record(&mut self) {
-        self.pre_txs = self.last_txs;
-        self.pre_gas = self.last_gas;
-        self.pre_instant = Instant::now();
+    pub(crate) fn start_record(&mut self, _block_number: u64) {
+        if self.timer_switch == false {
+            self.pre_txs = self.last_txs;
+            self.pre_gas = self.last_gas;
+            self.pre_instant = Instant::now();
+
+            self.timer_switch = true;
+        }
     }
 
-    pub(crate) fn stop_record(&mut self, block_number: u64) {
-        self.print(block_number, self.last_txs, self.last_gas);
+    pub(crate) fn stop_record(&mut self, _block_number: u64) {
+        // self.print(block_number, self.last_txs, self.last_gas);
     }
 
     fn print(&mut self, block_number: u64, txs: u128, gas: u128) {
@@ -682,7 +711,15 @@ impl TpsAndGasRecordDisplayer {
 #[cfg(feature = "enable_tps_gas_record")]
 impl Default for TpsAndGasRecordDisplayer {
     fn default() -> Self {
-        Self { pre_txs: 0, pre_gas: 0, last_txs: 0, last_gas: 0, pre_instant: Instant::now() }
+        Self {
+            pre_txs: 0,
+            pre_gas: 0,
+            last_txs: 0,
+            last_gas: 0,
+            pre_instant: Instant::now(),
+            timer_switch: false,
+            last_print_block_number: u64::default(),
+        }
     }
 }
 
@@ -760,10 +797,13 @@ impl ExecuteTxsDisplayer {
 #[derive(Debug, Default)]
 pub(crate) struct StateRootUpdateDisplayer {
     record: StateRootUpdateRecord,
+    last_print_block_number: u64,
 }
 
 #[cfg(feature = "enable_state_root_record")]
 impl StateRootUpdateDisplayer {
+    const N: u64 = 1000;
+
     pub(crate) fn record(&mut self, record: StateRootUpdateRecord) {
         self.record.add(record);
     }
@@ -973,6 +1013,7 @@ impl StateRootUpdateDisplayer {
             .hash_state_slow()
             .checked_add(self.record.state_root_calculator())
             .and_then(|x| x.checked_add(state_calculate.total_time))
+            .and_then(|x| x.checked_add(self.record.state_write_to_db()))
             .and_then(|x| x.checked_add(self.record.hashed_state_write()))
             .and_then(|x| x.checked_add(self.record.flush()))
             .expect("overflow");
@@ -1044,6 +1085,7 @@ impl StateRootUpdateDisplayer {
             state_calculate.after_add_root,
             total_time,
         );
+        self.print_time_line("state.write_to_db", self.record.state_write_to_db(), total_time);
         self.print_time_line("hashed_state_write", self.record.hashed_state_write(), total_time);
         self.print_time_line("flush", self.record.flush(), total_time);
 
@@ -1856,7 +1898,18 @@ impl StateRootUpdateDisplayer {
         println!("");
     }
 
-    pub(crate) fn print(&self) {
+    pub(crate) fn print(&mut self) {
+        if self.last_print_block_number == u64::default() {
+            self.last_print_block_number = self.record.block_number();
+        }
+
+        let interval =
+            self.record.block_number().checked_sub(self.last_print_block_number).expect("overflow");
+        if interval < Self::N && 0 != self.record.block_number() % Self::N {
+            return
+        }
+        self.last_print_block_number = self.record.block_number();
+
         println!();
         self.print_trie_db_stat(self.record.state_trie_db_read());
         self.print_breakdown_funtion();

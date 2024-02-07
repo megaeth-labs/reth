@@ -530,6 +530,8 @@ pub struct StateRootUpdateRecord {
     storage_changes: u64,
     mpt_updates_to_db: u64,
 
+    state_write_to_db: u64,
+
     hashed_state_write: u64,
     hash_state_slow: u64,
     state_root_calculator: u64,
@@ -573,6 +575,7 @@ impl StateRootUpdateRecord {
         self.add_contract_account_changes(other.contract_account_changes);
         self.add_storage_changes(other.storage_changes);
         self.add_mpt_updates_to_db(other.mpt_updates_to_db);
+        self.add_state_write_to_db(other.state_write_to_db);
         self.add_hashed_state(other.hashed_state_write);
         self.add_hash_state_slow(other.hash_state_slow);
         self.add_state_root_calculator(other.state_root_calculator);
@@ -809,6 +812,10 @@ impl StateRootUpdateRecord {
         self.hashed_state_write
     }
 
+    pub(crate) fn state_write_to_db(&self) -> u64 {
+        self.state_write_to_db
+    }
+
     pub(crate) fn hash_state_slow(&self) -> u64 {
         self.hash_state_slow
     }
@@ -923,6 +930,10 @@ impl StateRootUpdateRecord {
 
     pub(crate) fn add_mpt_updates_to_db(&mut self, number: u64) {
         self.mpt_updates_to_db = self.mpt_updates_to_db.checked_add(number).expect("overflow");
+    }
+
+    pub(crate) fn add_state_write_to_db(&mut self, time: u64) {
+        self.state_write_to_db = self.state_write_to_db.checked_add(time).expect("overflow");
     }
 
     pub(crate) fn add_hashed_state(&mut self, time: u64) {
@@ -1333,7 +1344,7 @@ macro_rules! counterRecorder {
         }
     };
 }
-
+timeRecorder!(StateWriteToDBRecord | record_state_write_to_db);
 timeRecorder!(StateCaculateRecord | add_state_record_calculate);
 timeRecorder!(StateBeforeLoopRecord | add_state_before_loop);
 timeRecorder!(StateLoopBeginRecord | add_state_loop_begin);

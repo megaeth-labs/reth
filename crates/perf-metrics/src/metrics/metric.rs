@@ -28,6 +28,8 @@ pub enum MetricEvent {
     /// Duration record of function execute_inner.
     #[cfg(feature = "enable_execution_duration_record")]
     ExecutionStageTime {
+        /// current block_number.
+        block_number: u64,
         /// excution duration record.
         record: ExecutionDurationRecord,
     },
@@ -286,11 +288,12 @@ pub fn record_at_end(_cachedb_size: usize) {
         {
             _record.duration_record.add_write_to_db_duration();
             _record.duration_record.add_total_duration();
-            let _ = _record
-                .events_tx
-                .as_mut()
-                .expect("No sender")
-                .send(MetricEvent::ExecutionStageTime { record: _record.duration_record });
+            let _ = _record.events_tx.as_mut().expect("No sender").send(
+                MetricEvent::ExecutionStageTime {
+                    block_number: _record.block_number,
+                    record: _record.duration_record,
+                },
+            );
         }
 
         #[cfg(feature = "enable_db_speed_record")]
@@ -1313,6 +1316,14 @@ pub fn add_keccak256_execution(count: u64, time: u64) {
         if _record.state_root_update_record.is_hashswith_set() {
             _record.state_root_update_record.add_keccak256_execution(count, time);
         }
+    }
+}
+
+#[cfg(feature = "enable_state_root_record")]
+pub(crate) fn record_state_write_to_db(time: u64) {
+    unsafe {
+        let _record = METRIC_RECORDER.as_mut().expect("Metric recorder should not empty!");
+        _record.state_root_update_record.add_state_write_to_db(time);
     }
 }
 

@@ -92,9 +92,9 @@ impl DashboardListener {
     fn handle_event(&mut self, event: MetricEvent) {
         match event {
             #[cfg(feature = "enable_execution_duration_record")]
-            MetricEvent::ExecutionStageTime { record } => {
+            MetricEvent::ExecutionStageTime { block_number, record } => {
                 self.excution_dureation_displayer.update_excution_duration_record(record);
-                self.excution_dureation_displayer.print();
+                self.excution_dureation_displayer.print(block_number);
             }
             #[cfg(feature = "enable_tps_gas_record")]
             MetricEvent::BlockTpsAndGas { record } => {
@@ -107,7 +107,7 @@ impl DashboardListener {
             #[cfg(feature = "enable_tps_gas_record")]
             MetricEvent::BlockTpsAndGasSwitch { block_number, switch } => {
                 if switch {
-                    self.tps_gas_displayer.start_record();
+                    self.tps_gas_displayer.start_record(block_number);
                 } else {
                     self.tps_gas_displayer.stop_record(block_number);
                 }
