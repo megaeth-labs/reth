@@ -471,7 +471,7 @@ where
         let mut cumulative_gas_used = 0;
         let mut receipts = Vec::with_capacity(block.body.len());
         #[cfg(feature = "enable_execute_measure")]
-        perf_metrics::start_execute_tx_sub_recorder();
+        perf_metrics::start_execute_tx_sub_record();
         for (sender, transaction) in block.transactions_with_sender() {
             let time = Instant::now();
             // The sum of the transaction’s gas limit, Tg, and the gas utilized in this block prior,
@@ -546,7 +546,7 @@ where
     /// Get state size.
     #[cfg(feature = "enable_cache_record")]
     fn get_state_size(&self) -> usize {
-        self.evm.db.as_ref().map(|db| db.mem_usage()).unwrap_or(0)
+        self.evm.context.evm.db.mem_usage()
     }
 }
 
