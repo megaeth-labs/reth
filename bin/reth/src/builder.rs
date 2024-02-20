@@ -153,7 +153,7 @@ impl<DB: Database + DatabaseMetrics + DatabaseMetadata + 'static> NodeBuilderWit
         {
             let (dashboard_tx, dashboard_rx) = unbounded_channel();
             let dashboard_listener = DashboardListener::new(dashboard_rx);
-            ctx.task_executor.spawn_critical("dashboard listener task", dashboard_listener);
+            executor.spawn_critical("dashboard listener task", dashboard_listener);
             perf_metrics::set_metric_event_sender(dashboard_tx);
         }
 

@@ -175,9 +175,9 @@ reth-trie = { path = "crates/trie" }
 # revm-primitives = { version = "2.0", features = ["std"], default-features = false }
 # revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "ac63f06" }
 
-revm-inspectors = { path = "/home/andy/Source/work/evm-inspectors" }
-revm = { path = "/home/andy/Source/work/revm/crates/revm", features = ["std", "secp256k1"], default-features = false }
-revm-primitives = { path = "/home/andy/Source/work/revm/crates/primitives", features = ["std"], default-features = false }
+revm = { git = "https://github.com/megaeth-labs/revm.git", branch = "andy/dev/perf-for-v6.0.0", features = ["std", "secp256k1"], default-features = false }
+revm-primitives = { git = "https://github.com/megaeth-labs/revm.git", branch = "andy/dev/perf-for-v6.0.0", features = ["std"], default-features = false }
+revm-inspectors = { git = "https://github.com/megaeth-labs/evm-inspectors.git", branch = "match-revm-6.0.0" }
 
 # eth
 alloy-chains = { version = "0.1", feature = ["serde", "rlp", "arbitrary"] }
@@ -276,7 +276,7 @@ similar-asserts = "1.5.0"
 
 ## support perf test
 perf-metrics = { path = "./crates/perf-metrics"}
-revm-utils = { path = "/home/andy/Source/work/revm/crates/utils" }
+revm-utils = { git = "https://github.com/megaeth-labs/revm.git", branch = "andy/dev/perf-for-v6.0.0" }
 
 [workspace.metadata.cargo-udeps.ignore]
 # ignored because this is mutually exclusive with the optimism payload builder via feature flags

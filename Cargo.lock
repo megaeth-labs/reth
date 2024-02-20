@@ -7086,6 +7086,7 @@ dependencies = [
 [[package]]
 name = "revm"
 version = "6.0.0"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=andy/dev/perf-for-v6.0.0#f4f2987427542ab976ea7a7ce140d55fcb6d3717"
 dependencies = [
  "auto_impl",
  "cfg-if",
@@ -7100,6 +7101,7 @@ dependencies = [
 [[package]]
 name = "revm-inspectors"
 version = "0.1.0"
+source = "git+https://github.com/megaeth-labs/evm-inspectors.git?branch=match-revm-6.0.0#52c7a76e9107e9cb74912cf265f23dcbffd8e97a"
 dependencies = [
  "alloy-primitives",
  "alloy-rpc-trace-types",
@@ -7118,6 +7120,7 @@ dependencies = [
 [[package]]
 name = "revm-interpreter"
 version = "3.0.0"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=andy/dev/perf-for-v6.0.0#f4f2987427542ab976ea7a7ce140d55fcb6d3717"
 dependencies = [
  "revm-primitives",
  "revm-utils",
@@ -7127,6 +7130,7 @@ dependencies = [
 [[package]]
 name = "revm-precompile"
 version = "4.0.1"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=andy/dev/perf-for-v6.0.0#f4f2987427542ab976ea7a7ce140d55fcb6d3717"
 dependencies = [
  "aurora-engine-modexp",
  "blst",
@@ -7143,6 +7147,7 @@ dependencies = [
 [[package]]
 name = "revm-primitives"
 version = "2.0.1"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=andy/dev/perf-for-v6.0.0#f4f2987427542ab976ea7a7ce140d55fcb6d3717"
 dependencies = [
  "alloy-primitives",
  "auto_impl",
@@ -7163,6 +7168,7 @@ dependencies = [
 [[package]]
 name = "revm-utils"
 version = "0.1.0"
+source = "git+https://github.com/megaeth-labs/revm.git?branch=andy/dev/perf-for-v6.0.0#f4f2987427542ab976ea7a7ce140d55fcb6d3717"
 dependencies = [
  "allocator-api2",
  "ctor 0.2.6",
