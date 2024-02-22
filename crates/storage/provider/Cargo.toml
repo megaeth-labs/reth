@@ -66,9 +66,6 @@ rand.workspace = true
 test-utils = ["alloy-rlp", "reth-db/test-utils"]
 optimism = ["reth-primitives/optimism", "reth-interfaces/optimism"]
 enable_cache_record = []
-enable_db_speed_record = [
-  "reth-db/enable_db_speed_record",
-]
-enable_write_to_db_measure = [
-  "perf-metrics/enable_write_to_db_measure"
+enable_execution_duration_record = [
+  "perf-metrics/enable_execution_duration_record"
 ]

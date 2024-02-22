@@ -35,7 +35,6 @@ libffi = "3.2.0"
 default = []
 return-borrowed = []
 read-tx-timeouts = ["dashmap", "dashmap/inline", "tracing"]
-enable_db_speed_record =["perf-metrics"]
 
 [dev-dependencies]
 pprof = { workspace = true, features = ["flamegraph", "frame-pointer", "criterion"] }
