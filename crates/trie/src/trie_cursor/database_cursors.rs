@@ -50,7 +50,12 @@ where
     ) -> Result<Option<(Nibbles, BranchNodeCompact)>, DatabaseError> {
         let seek_exact = {
             #[cfg(feature = "enable_state_root_record")]
-            let _walker_seek_exact = perf_metrics::DBAccountTrieSeekExactRead::default();
+            let _walker_seek_exact = perf_metrics::state_root::DBRecorder::new(
+                perf_metrics::metrics::metric::state_root::db::add_at_seek_exact,
+            );
+
+            #[cfg(feature = "enable_state_root_record")]
+            let _walker_seek_exact_ = perf_metrics::DBAccountTrieSeekExactRead::default();
 
             self.0.seek_exact(StoredNibbles(key))?
         };
@@ -65,7 +70,12 @@ where
     ) -> Result<Option<(Nibbles, BranchNodeCompact)>, DatabaseError> {
         let seek = {
             #[cfg(feature = "enable_state_root_record")]
-            let _walker_seek = perf_metrics::DBAccountTrieSeekRead::default();
+            let _walker_seek = perf_metrics::state_root::DBRecorder::new(
+                perf_metrics::metrics::metric::state_root::db::add_at_seek,
+            );
+
+            #[cfg(feature = "enable_state_root_record")]
+            let _walker_seek_ = perf_metrics::DBAccountTrieSeekRead::default();
 
             self.0.seek(StoredNibbles(key))?
         };
@@ -77,7 +87,12 @@ where
     fn current(&mut self) -> Result<Option<TrieKey>, DatabaseError> {
         let current = {
             #[cfg(feature = "enable_state_root_record")]
-            let _walker_current = perf_metrics::DBAccountTrieCurrentRead::default();
+            let _at_current = perf_metrics::state_root::DBRecorder::new(
+                perf_metrics::metrics::metric::state_root::db::add_at_current,
+            );
+
+            #[cfg(feature = "enable_state_root_record")]
+            let _walker_current_ = perf_metrics::DBAccountTrieCurrentRead::default();
 
             self.0.current()?
         };
@@ -113,7 +128,12 @@ where
     ) -> Result<Option<(Nibbles, BranchNodeCompact)>, DatabaseError> {
         let seek_by_key_subkey = {
             #[cfg(feature = "enable_state_root_record")]
-            let _seek_by_key_subkey = perf_metrics::DBStorageTrieSeekBySubKeyRead::default();
+            let _seek_by_key_subkey = perf_metrics::state_root::DBRecorder::new(
+                perf_metrics::metrics::metric::state_root::db::add_st_seek_by_subkey,
+            );
+
+            #[cfg(feature = "enable_state_root_record")]
+            let _seek_by_key_subkey_ = perf_metrics::DBStorageTrieSeekBySubKeyRead::default();
 
             self.cursor.seek_by_key_subkey(self.hashed_address, StoredNibblesSubKey(key.clone()))?
         };
@@ -130,7 +150,12 @@ where
     ) -> Result<Option<(Nibbles, BranchNodeCompact)>, DatabaseError> {
         let seek_by_key_subkey = {
             #[cfg(feature = "enable_state_root_record")]
-            let _seek_by_key_subkey = perf_metrics::DBStorageTrieSeekBySubKeyRead::default();
+            let _seek_by_key_subkey = perf_metrics::state_root::DBRecorder::new(
+                perf_metrics::metrics::metric::state_root::db::add_st_seek_by_subkey,
+            );
+
+            #[cfg(feature = "enable_state_root_record")]
+            let _seek_by_key_subkey_ = perf_metrics::DBStorageTrieSeekBySubKeyRead::default();
 
             self.cursor.seek_by_key_subkey(self.hashed_address, StoredNibblesSubKey(key))?
         };
@@ -142,7 +167,12 @@ where
     fn current(&mut self) -> Result<Option<TrieKey>, DatabaseError> {
         let current = {
             #[cfg(feature = "enable_state_root_record")]
-            let _current = perf_metrics::DBStorageTrieCurrentRead::default();
+            let _current = perf_metrics::state_root::DBRecorder::new(
+                perf_metrics::metrics::metric::state_root::db::add_st_current,
+            );
+
+            #[cfg(feature = "enable_state_root_record")]
+            let _current_ = perf_metrics::DBStorageTrieCurrentRead::default();
 
             self.cursor.current()?
         };

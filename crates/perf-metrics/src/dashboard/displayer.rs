@@ -32,6 +32,8 @@ use crate::metrics::DatabaseOperationRecord;
 
 #[cfg(feature = "enable_state_root_record")]
 use crate::metrics::StateRootUpdateRecord;
+#[cfg(feature = "enable_state_root_record")]
+use crate::state_root::StateRootRecord;
 
 #[cfg(feature = "enable_opcode_metrics")]
 const MGAS_TO_GAS: u64 = 1_000_000u64;
@@ -796,6 +798,7 @@ impl ExecuteTxsDisplayer {
 #[cfg(feature = "enable_state_root_record")]
 #[derive(Debug, Default)]
 pub(crate) struct StateRootUpdateDisplayer {
+    recorder: StateRootRecord,
     record: StateRootUpdateRecord,
     last_print_block_number: u64,
 }
@@ -803,6 +806,10 @@ pub(crate) struct StateRootUpdateDisplayer {
 #[cfg(feature = "enable_state_root_record")]
 impl StateRootUpdateDisplayer {
     const N: u64 = 1000;
+
+    pub(crate) fn update_record(&mut self, recorder: StateRootRecord) {
+        self.recorder = recorder;
+    }
 
     pub(crate) fn record(&mut self, record: StateRootUpdateRecord) {
         self.record.add(record);
@@ -816,7 +823,7 @@ impl StateRootUpdateDisplayer {
         println!("{: <COL_WIDTH_BIG$}{: >COL_WIDTH_MIDDLE$.3}", name, value);
     }
 
-    fn print_caculate_stat(&self, record: &crate::metrics::CaculateRecord) {
+    fn print_caculate_stat(&self, record: &crate::metrics::CaculateStat) {
         println!("record:{:?}", record);
         self.print_line_f64("calculate(s)", cycles_as_secs(record.total_time));
         self.print_line_f64("before_loop(s)", cycles_as_secs(record.before_loop));
@@ -1920,6 +1927,21 @@ impl StateRootUpdateDisplayer {
         self.print_update_keys();
         self.print_metric_trie();
         self.print_metric_db_cat();
+
+        println!(
+            "\nat-seek-exact:{:?},{:?}",
+            self.record.db_read().account_trie_seek_exact,
+            cycles_as_secs(self.record.db_read().account_trie_seek_exact)
+        );
+        println!(
+            "\nmac-at-seek-exact:{:?},{:?}, {:?}\n\n",
+            self.recorder.db_read.at_seek_exact_count,
+            self.recorder.db_read.at_seek_exact_time,
+            cycles_as_secs(self.recorder.db_read.at_seek_exact_time)
+        );
+
+        println!("\nmac-at-seek-exact:{:?}\n\n", self.recorder.db_read);
+
         self.print_db_count_and_time();
 
         println!();
@@ -2082,6 +2104,8 @@ impl StateRootUpdateDisplayer {
             self.record.account_mpt_node_number() + self.record.storage_mpt_nodes_number() -
                 self.record.storage_mpt_not_empty_hash_number(),
         );
+
+        println!("\n\nself.recorder: {:?}\n", self.recorder);
     }
 }
 
