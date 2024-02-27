@@ -101,7 +101,13 @@ where
 
         #[cfg(feature = "enable_state_root_record")]
         let _time_try_next =
-            perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::StateTryNext);
+            perf_metrics::TimeRecorder2::new(perf_metrics::FunctionName::StateTryNext);
+
+        #[cfg(feature = "enable_state_root_record")]
+        let _stat_try_next = perf_metrics::state_root::recorder::CountAndTimeRecorder::new(
+            perf_metrics::metrics::metric::state_root::try_next::add_state_count_and_time,
+        );
+
         loop {
             // If the walker has a key...
 
@@ -115,6 +121,9 @@ where
                     if self.walker.can_skip_current_node {
                         #[cfg(feature = "enable_state_root_record")]
                         perf_metrics::add_state_try_next_stat_skip_branch_node_count(1);
+
+                        #[cfg(feature = "enable_state_root_record")]
+                        perf_metrics::metrics::metric::state_root::try_next::add_state_skip_branch_node_count(1);
 
                         return Ok(Some(AccountNode::Branch(TrieBranchNode::new(
                             key.clone(),
@@ -132,12 +141,21 @@ where
                 if self.walker.key().map_or(false, |key| key < &Nibbles::unpack(hashed_address)) {
                     #[cfg(feature = "enable_state_root_record")]
                     perf_metrics::add_state_try_next_stat_leaf_miss_count(1);
+
+                    #[cfg(feature = "enable_state_root_record")]
+                    perf_metrics::metrics::metric::state_root::try_next::add_state_leaf_miss_count(
+                        1,
+                    );
+
                     self.current_walker_key_checked = false;
                     continue
                 }
 
                 #[cfg(feature = "enable_state_root_record")]
                 perf_metrics::add_state_try_next_stat_leaf_hit_count(1);
+
+                #[cfg(feature = "enable_state_root_record")]
+                perf_metrics::metrics::metric::state_root::try_next::add_state_leaf_hit_count(1);
 
                 // Set the next hashed entry as a leaf node and return
                 self.current_hashed_entry = self.hashed_account_cursor.next()?;
@@ -223,7 +241,12 @@ where
 
         #[cfg(feature = "enable_state_root_record")]
         let _time_try_next =
-            perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::StorageTryNext);
+            perf_metrics::TimeRecorder2::new(perf_metrics::FunctionName::StorageTryNext);
+
+        #[cfg(feature = "enable_state_root_record")]
+        let _stat_try_next = perf_metrics::state_root::recorder::CountAndTimeRecorder::new(
+            perf_metrics::metrics::metric::state_root::try_next::add_storage_count_and_time,
+        );
 
         loop {
             // Check if there's a key in the walker.
@@ -256,12 +279,21 @@ where
                 if self.walker.key().map_or(false, |key| key < &Nibbles::unpack(hashed_key)) {
                     #[cfg(feature = "enable_state_root_record")]
                     perf_metrics::add_storage_try_next_stat_leaf_miss_count(1);
+
+                    #[cfg(feature = "enable_state_root_record")]
+                    perf_metrics::metrics::metric::state_root::try_next::add_storage_leaf_miss_count(
+                        1,
+                    );
+
                     self.current_walker_key_checked = false;
                     continue
                 }
 
                 #[cfg(feature = "enable_state_root_record")]
                 perf_metrics::add_storage_try_next_stat_leaf_hit_count(1);
+
+                #[cfg(feature = "enable_state_root_record")]
+                perf_metrics::metrics::metric::state_root::try_next::add_storage_leaf_hit_count(1);
 
                 // Move to the next hashed storage entry and return the corresponding leaf node.
                 self.current_hashed_entry = self.hashed_storage_cursor.next()?;

@@ -352,7 +352,7 @@ impl TryNextStat {
 }
 
 #[derive(Debug, Clone, Copy, Default)]
-pub struct CaculateRecord {
+pub struct CaculateStat {
     pub(crate) total_time: u64,
     pub(crate) before_loop: u64,
     pub(crate) loop_begin: u64,
@@ -368,7 +368,7 @@ pub struct CaculateRecord {
     pub(crate) after_add_root: u64,
 }
 
-impl CaculateRecord {
+impl CaculateStat {
     pub(crate) fn add_other(&mut self, other: Self) {
         self.add_total_time(other.total_time);
         self.add_before_loop(other.before_loop);
@@ -545,8 +545,8 @@ pub struct StateRootUpdateRecord {
     // state_db_time: DBRead,
     // storage_db_time: DBRead,
     db_read: DBRead,
-    state_calculate_record: CaculateRecord,
-    storage_calculate_record: CaculateRecord,
+    state_calculate_record: CaculateStat,
+    storage_calculate_record: CaculateStat,
 
     flush: u64,
 
@@ -835,11 +835,11 @@ impl StateRootUpdateRecord {
         &self.db_read
     }
 
-    pub(crate) fn state_calculate_record(&self) -> &CaculateRecord {
+    pub(crate) fn state_calculate_record(&self) -> &CaculateStat {
         &self.state_calculate_record
     }
 
-    pub(crate) fn storage_calculate_record(&self) -> &CaculateRecord {
+    pub(crate) fn storage_calculate_record(&self) -> &CaculateStat {
         &self.storage_calculate_record
     }
 
@@ -1414,18 +1414,18 @@ pub enum FunctionName {
     // Keccak256,
 }
 
-pub struct TimeRecorder {
+pub struct TimeRecorder2 {
     function: FunctionName,
     start: Instant,
 }
 
-impl TimeRecorder {
+impl TimeRecorder2 {
     pub fn new(function: FunctionName) -> Self {
         Self { function, start: Instant::now() }
     }
 }
 
-impl Drop for TimeRecorder {
+impl Drop for TimeRecorder2 {
     fn drop(&mut self) {
         let time_cycles = Instant::now().checked_cycles_since(self.start).unwrap();
 

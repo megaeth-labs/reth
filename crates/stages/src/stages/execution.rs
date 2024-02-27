@@ -225,6 +225,9 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                 perf_metrics::reset_state_root_update_record(block_number);
                 perf_metrics::record_total_txs(block.body.len() as u64);
 
+                perf_metrics::metrics::metric::state_root::common::set_block_number(block_number);
+                perf_metrics::metrics::metric::state_root::common::add_total_txs_count(block.body.len() as u64);
+
                 let mut state = executor.take_output_state();
                 let hashed_state = state.hash_state_slow();
                 let (_, trie_updates) = hashed_state

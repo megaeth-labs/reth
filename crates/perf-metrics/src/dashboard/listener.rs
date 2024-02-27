@@ -143,6 +143,10 @@ impl DashboardListener {
                 // self.state_root_update_displayer.print();
             }
             #[cfg(feature = "enable_state_root_record")]
+            MetricEvent::StateRootRecordUpdate { record } => {
+                self.state_root_update_displayer.update_record(record);
+            }
+            #[cfg(feature = "enable_state_root_record")]
             MetricEvent::StateRootUpdatePrint {} => {
                 self.state_root_update_displayer.print();
             }
