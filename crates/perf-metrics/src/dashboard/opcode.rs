@@ -1,4 +1,4 @@
-use revm::opcode::*;
+use revm::revm_opcode::*;
 
 pub(crate) const OPCODE_NUMBER: usize = 256;
 
