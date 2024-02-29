@@ -1,105 +1,252 @@
 //! This module is used to support recording the overhead of various parts
-//! of the execute_inner function in execution stage. It records the overheads of
-//! five parts in execute_inner, namely the overheads of fetch_block, executions,
-//! process state, write to db, and the total overhead of execute_inner.
-use revm_utils::time_utils::instant::Instant;
+//! of the execute_inner function in execution stage.
+use revm_utils::{metrics::types::TransactTime, time_utils::instant::Instant};
 
 /// This structure is used to record all overhead information.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ExecutionDurationRecord {
     // Total time recorder.
-    total_recorder: Instant,
+    pub total_recorder: Instant,
     // General time recorder.
-    time_recorder: Instant,
+    pub time_recorder: Instant,
     // Time of execute inner.
-    total: u64,
+    pub total: u64,
     // Time of get_block_td.
-    block_td: u64,
+    pub block_td: u64,
     // Time of block_with_senders.
-    block_with_senders: u64,
-    // Time of Revm execution(execute_and_verify_receipt).
-    execution: u64,
-    // Time of process state(state.extend)
-    take_output_state: u64,
-    // Time of write to db
-    write_to_db: u64,
+    pub block_with_senders: u64,
+    // Record of txs execution(execute_and_verify_receipt).
+    pub execution: ExecuteTxsRecord,
+    // Record of write to db
+    pub write_to_db: WriteToDbRecord,
 }
 
 // The following functions are used to record overhead.
 impl ExecutionDurationRecord {
-    /// Start total time recorder.
-    pub(crate) fn start_total_record(&mut self) {
-        self.total_recorder = Instant::now();
+    define_start_functions!(start_total_record, total_recorder);
+    define_start_functions!(start_time_record, time_recorder);
+    define_record_time_function!(add_total_duration, total, total_recorder);
+    define_record_time_function!(add_block_td_duration, block_td, time_recorder);
+    define_record_time_function!(
+        add_block_with_senders_duration,
+        block_with_senders,
+        time_recorder
+    );
+}
+
+/// This structure is used to support in-depth measurement of function execute_and_verify_receipt
+/// in stage execution.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct ExecuteTxsRecord {
+    /// Record the starting time of function execute_and_verify_receipt.
+    start_record: Instant,
+    /// Record the start time of each subfunction.
+    sub_record: Instant,
+    /// Time of execute_and_verify_receipt.
+    pub total: u64,
+    /// Time of transact.
+    pub transact: u64,
+    /// Time of revm's transact.
+    pub revm_transact: TransactTime,
+    /// Time of commit changes.
+    pub commit_changes: u64,
+    /// Time of add receipt.
+    pub add_receipt: u64,
+    /// Time of apply_post_execution_state_change.
+    pub apply_post_execution_state_change: u64,
+    /// Time of merge_transactions.
+    pub merge_transactions: u64,
+    /// Time of verify_receipt.
+    pub verify_receipt: u64,
+    /// Time of save_receipts.
+    pub save_receipts: u64,
+}
+
+impl ExecuteTxsRecord {
+    define_start_functions!(start_record, start_record);
+    define_start_functions!(start_sub_record, sub_record);
+
+    define_record_with_elapsed_time_function!(commit_changes_record, commit_changes, sub_record);
+    define_record_with_elapsed_time_function!(add_receipt_record, add_receipt, sub_record);
+    define_record_with_elapsed_time_function!(
+        apply_post_execution_state_change_record,
+        apply_post_execution_state_change,
+        sub_record
+    );
+    define_record_with_elapsed_time_function!(
+        merge_transactions_record,
+        merge_transactions,
+        sub_record
+    );
+    define_record_with_elapsed_time_function!(verify_receipt_record, verify_receipt, sub_record);
+    define_record_with_elapsed_time_function!(
+        save_receipts_record_inner,
+        save_receipts,
+        sub_record
+    );
+    define_record_with_elapsed_time_function!(transact_record_inner, transact, sub_record);
+
+    /// Add time of transact, which include revm's transact.
+    pub(super) fn transact_record(&mut self) {
+        self.transact_record_inner();
+        let revm_transact = revm_utils::metrics::get_transact_time();
+        self.revm_transact.update(&revm_transact);
     }
-    /// Start general time recorder.
-    pub(crate) fn start_time_record(&mut self) {
-        self.time_recorder = Instant::now();
+
+    /// Add time of save_receipts.
+    pub(super) fn save_receipts_record(&mut self) {
+        let now = self.save_receipts_record_inner();
+        self.record_total_time(now);
     }
-    /// Add time of total.
-    pub(crate) fn add_total_duration(&mut self) {
-        let cycles = Instant::now().checked_cycles_since(self.total_recorder).expect("overflow");
+
+    /// Record total time.
+    fn record_total_time(&mut self, now: Instant) {
+        let cycles = now.checked_cycles_since(self.start_record).unwrap_or(0);
         self.total = self.total.checked_add(cycles).expect("overflow");
-    }
-    /// Add time of block_td.
-    pub(crate) fn add_block_td_duration(&mut self) {
-        let cycles = Instant::now().checked_cycles_since(self.time_recorder).expect("overflow");
-        self.block_td = self.block_td.checked_add(cycles).expect("overflow");
-    }
-    /// Add time of block_with_senders.
-    pub(crate) fn add_block_with_senders_duration(&mut self) {
-        let cycles = Instant::now().checked_cycles_since(self.time_recorder).expect("overflow");
-        self.block_with_senders = self.block_with_senders.checked_add(cycles).expect("overflow");
-    }
-    /// Add time of Revm execution.
-    pub(crate) fn add_execute_tx_duration(&mut self) {
-        let cycles = Instant::now().checked_cycles_since(self.time_recorder).expect("overflow");
-        self.execution = self.execution.checked_add(cycles).expect("overflow");
-    }
-    /// Add time of process state
-    pub(crate) fn add_take_output_state_duration(&mut self) {
-        let cycles = Instant::now().checked_cycles_since(self.time_recorder).expect("overflow");
-        self.take_output_state = self.take_output_state.checked_add(cycles).expect("overflow");
-    }
-    /// Add time of write to db
-    pub(crate) fn add_write_to_db_duration(&mut self) {
-        let cycles = Instant::now().checked_cycles_since(self.time_recorder).expect("overflow");
-        self.write_to_db = self.write_to_db.checked_add(cycles).expect("overflow");
     }
 }
 
-// The following functions are used to obtain the recorded results.
-impl ExecutionDurationRecord {
-    /// Return the overhead of execute_inner.
-    pub fn total(&self) -> u64 {
-        self.total
+/// This structure is used to record all the metrics of write_to_db, including
+/// the time spent writing and the amount of data written.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct WriteToDbRecord {
+    /// Record the starting time of function write_to_db.
+    start_record: Instant,
+    /// Record the start time of each subfunction.
+    sub_record: Instant,
+    /// Record the start time of each put or upsert.
+    write_start_record: Instant,
+
+    /// Time of write_to_db.
+    pub total: u64,
+
+    /// Time of write storage changes in StateReverts.
+    pub revert_storage_time: u64,
+    /// Data size of write storage changes in StateReverts.
+    pub revert_storage_size: usize,
+    /// Time of append_dup when write storage changes in StateReverts.
+    pub revert_storage_append_time: u64,
+    /// Time of write account changes in StateReverts.
+    pub revert_account_time: u64,
+    /// Data size of write account changes in StateReverts.
+    pub revert_account_size: usize,
+    /// Time of append_dup when write account changes in StateReverts.
+    pub revert_account_append_time: u64,
+
+    /// Time of write receipts.
+    pub write_receipts_time: u64,
+    /// Data size of write receipts.
+    pub write_receipts_size: usize,
+    /// Time of append when write receipts.
+    pub receipts_append_time: u64,
+
+    /// Time of sort in StateChanges's write_to_db.
+    pub sort_time: u64,
+    /// Time of write account in StateChanges.
+    pub state_account_time: u64,
+    /// Data size of write account in StateChanges.
+    pub state_account_size: usize,
+    /// Time of upsert when write account changes in StateChanges.
+    pub state_account_upsert_time: u64,
+
+    /// Time of write bytecode in StateChanges.
+    pub state_bytecode_time: u64,
+    /// Data size of write bytecode in StateChanges.
+    pub state_bytecode_size: usize,
+    /// Time of upsert when write bytecode in StateChanges.
+    pub state_bytecode_upsert_time: u64,
+
+    /// Time of write storage in StateChanges.
+    pub state_storage_time: u64,
+    /// Data size of write storage in StateChanges.
+    pub state_storage_size: usize,
+    /// Time of upsert when write storage in StateChanges.
+    pub state_storage_upsert_time: u64,
+}
+
+impl WriteToDbRecord {
+    define_start_functions!(start_record, start_record);
+    define_start_functions!(start_sub_record, sub_record);
+    define_start_functions!(start_write_record, write_start_record);
+
+    define_record_size_function!(record_revert_storage_size, revert_storage_size);
+    define_record_size_function!(record_revert_account_size, revert_account_size);
+    define_record_size_function!(record_write_receipts_size, write_receipts_size);
+    define_record_size_function!(record_state_account_size, state_account_size);
+    define_record_size_function!(record_state_bytecode_size, state_bytecode_size);
+    define_record_size_function!(record_state_storage_size, state_storage_size);
+
+    define_record_with_elapsed_time_function!(
+        record_revert_storage_time,
+        revert_storage_time,
+        sub_record
+    );
+    define_record_with_elapsed_time_function!(
+        record_revert_account_time,
+        revert_account_time,
+        sub_record
+    );
+    define_record_with_elapsed_time_function!(
+        record_write_receipts_time,
+        write_receipts_time,
+        sub_record
+    );
+    define_record_with_elapsed_time_function!(record_sort_time, sort_time, sub_record);
+    define_record_with_elapsed_time_function!(
+        record_state_account_time,
+        state_account_time,
+        sub_record
+    );
+    define_record_with_elapsed_time_function!(
+        record_state_bytecode_time,
+        state_bytecode_time,
+        sub_record
+    );
+    define_record_with_elapsed_time_function!(
+        record_state_storage_time_inner,
+        state_storage_time,
+        sub_record
+    );
+
+    define_record_with_elapsed_time_function!(
+        record_revert_storage_append_time,
+        revert_storage_append_time,
+        write_start_record
+    );
+    define_record_with_elapsed_time_function!(
+        record_revert_account_append_time,
+        revert_account_append_time,
+        write_start_record
+    );
+    define_record_with_elapsed_time_function!(
+        record_receipts_append_time,
+        receipts_append_time,
+        write_start_record
+    );
+    define_record_with_elapsed_time_function!(
+        record_state_account_upsert_time,
+        state_account_upsert_time,
+        write_start_record
+    );
+    define_record_with_elapsed_time_function!(
+        record_state_bytecode_upsert_time,
+        state_bytecode_upsert_time,
+        write_start_record
+    );
+    define_record_with_elapsed_time_function!(
+        record_state_storage_upsert_time,
+        state_storage_upsert_time,
+        write_start_record
+    );
+
+    /// Record time of write storage in StateChanges.
+    pub(super) fn record_state_storage_time(&mut self) {
+        let now = self.record_state_storage_time_inner();
+        self.record_total_time(now);
     }
-    /// Return the overhead of block_td.
-    pub fn block_td(&self) -> u64 {
-        self.block_td
-    }
-    /// Return the overhead of block_with_senders.
-    pub fn block_with_senders(&self) -> u64 {
-        self.block_with_senders
-    }
-    /// Return the overhead of Revm execution.
-    pub fn execution(&self) -> u64 {
-        self.execution
-    }
-    /// Return the overhead of process state.
-    pub fn take_output_state(&self) -> u64 {
-        self.take_output_state
-    }
-    /// Return the overhead of write to db.
-    pub fn write_to_db(&self) -> u64 {
-        self.write_to_db
-    }
-    /// Return the overhead of misc.
-    pub fn misc(&self) -> u64 {
-        self.total -
-            self.block_td -
-            self.block_with_senders -
-            self.execution -
-            self.take_output_state -
-            self.write_to_db
+    /// Record total time.
+    fn record_total_time(&mut self, now: Instant) {
+        let cycles = now.checked_cycles_since(self.start_record).unwrap_or(0);
+        self.total = self.total.checked_add(cycles).expect("overflow");
     }
 }

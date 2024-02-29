@@ -177,8 +177,6 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                 block: Box::new(block.header.clone().seal_slow()),
                 error: BlockErrorKind::Execution(error),
             })?;
-            #[cfg(feature = "open_performance_dashboard")]
-            perf_metrics::record_after_execute();
             execution_duration += execute_start.elapsed();
 
             // Gas and txs metrics
@@ -199,20 +197,6 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
 
             // Check if we should commit now
             let bundle_size_hint = executor.size_hint().unwrap_or_default() as u64;
-            #[cfg(all(feature = "enable_test_max_th", feature = "enable_cache_record"))]
-            {
-                // TODO: Need modify later.
-                if block_number % 100_000 == 0 {
-                    let cachedb_size = executor.get_state_size();
-                    println!(
-                    "block_number: {:?}, start_block: {:?}, state.size_hint: {:?}, cache_size: {:?}",
-                    block_number,
-                    start_block,
-                    bundle_size_hint,
-                    cachedb_size,
-                );
-                }
-            }
             if self.thresholds.is_end_of_batch(
                 block_number - start_block,
                 bundle_size_hint,
@@ -223,9 +207,6 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                 break
             }
         }
-        #[cfg(feature = "open_performance_dashboard")]
-        perf_metrics::record_after_loop();
-
         let time = Instant::now();
         let state = executor.take_output_state();
         #[cfg(feature = "open_performance_dashboard")]
@@ -236,14 +217,12 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
         let time = Instant::now();
         // write output
         state.write_to_db(provider.tx_ref(), OriginalValuesKnown::Yes)?;
-        #[cfg(feature = "open_performance_dashboard")]
-        {
-            #[cfg(feature = "enable_cache_record")]
-            let cachedb_size = executor.get_state_size();
-            #[cfg(not(feature = "enable_cache_record"))]
-            let cachedb_size = 0;
-            perf_metrics::record_at_end(cachedb_size);
-        }
+
+        #[cfg(all(feature = "open_performance_dashboard", feature = "enable_cache_record"))]
+        perf_metrics::record_at_end(executor.get_state_size());
+        #[cfg(all(feature = "open_performance_dashboard", not(feature = "enable_cache_record")))]
+        perf_metrics::record_at_end(0);
+
         let db_write_duration = time.elapsed();
         debug!(
             target: "sync::stages::execution",

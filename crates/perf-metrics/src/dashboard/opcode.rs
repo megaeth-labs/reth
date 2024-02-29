@@ -1,4 +1,6 @@
+//! This module is used to support the display of opcode statistics metrics.
 use revm::revm_opcode::*;
+use revm_utils::metrics::types::OpcodeRecord;
 
 pub(crate) const OPCODE_NUMBER: usize = 256;
 
@@ -270,3 +272,279 @@ pub(crate) const MERGE_MAP: [Option<(u8, OpcodeInfo)>; OPCODE_NUMBER] = [
     Some((INVALID, OpcodeInfo { category: "invalid", gas: 0, static_gas: true })), //0xfe
     Some((SELFDESTRUCT, OpcodeInfo { category: "host", gas: 5000, static_gas: false })), //0xff
 ];
+
+use super::commons::*;
+use revm_utils::time_utils::convert_cycles_to_ns_f64;
+use std::collections::BTreeMap;
+const MGAS_TO_GAS: u64 = 1_000_000u64;
+
+const COL_WIDTH: usize = 15;
+#[derive(Default, Debug)]
+struct OpcodeMergeRecord {
+    count: u64,
+    count_pct: f64,
+    time: u64,
+    time_pct: f64,
+    avg_cost: f64,
+}
+
+#[derive(Default, Debug)]
+struct OpcodeStat {
+    count: u64,
+    count_pct: f64,
+    time: u64,
+    time_pct: f64,
+    avg_cost: f64,
+    mgas: f64,
+    mgas_pct: f64,
+    static_gas: Option<u64>,
+    dyn_gas: Option<f64>,
+    cat: Option<&'static str>,
+}
+
+impl OpcodeStat {
+    fn print(&self, opcode: &str) {
+        let static_gas = match self.static_gas {
+            None => "NAN".to_string(),
+            Some(s) => s.to_string(),
+        };
+
+        let dyn_gas = match self.dyn_gas {
+            None => "".to_string(),
+            Some(gas) => {
+                if gas > 0.01 {
+                    format!("{:.2}", gas).to_string()
+                } else {
+                    "".to_string()
+                }
+            }
+        };
+
+        println!(
+            "{: <COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$.3}{:>COL_WIDTH$.2}{:>COL_WIDTH$.3} \
+            {:>COL_WIDTH$.1}{:>COL_WIDTH$.2}{:>COL_WIDTH$.2}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}",
+            opcode,
+            self.count,
+            self.count_pct * 100.0,
+            cycles_as_secs(self.time),
+            self.time_pct * 100.0,
+            self.avg_cost,
+            self.mgas,
+            self.mgas_pct * 100.0,
+            static_gas,
+            dyn_gas,
+            self.cat.unwrap_or("NAN"),
+        );
+    }
+}
+
+#[derive(Debug)]
+struct OpcodeStats {
+    overall: OpcodeStat,
+    opcode: [Option<OpcodeStat>; OPCODE_NUMBER],
+    merge_records: BTreeMap<&'static str, OpcodeMergeRecord>,
+}
+
+const ARRAY_REPEAT_VALUE: std::option::Option<OpcodeStat> = None;
+impl Default for OpcodeStats {
+    fn default() -> Self {
+        Self {
+            overall: OpcodeStat::default(),
+            opcode: [ARRAY_REPEAT_VALUE; OPCODE_NUMBER],
+            merge_records: BTreeMap::new(),
+        }
+    }
+}
+
+impl OpcodeStats {
+    fn print_opcode_title(&self) {
+        println!("===========================================================================Metric of instruction======================================================================");
+        println!(
+            "{: <COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$} \
+            {:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}",
+            "Opcode",
+            "Count",
+            "Count (%)",
+            "Time (s)",
+            "Time (%)",
+            "Cost (ns)",
+            "Total Mgas",
+            "Gas (%)",
+            "Static gas",
+            "Dyn. gas",
+            "Category"
+        );
+    }
+
+    fn print_opcodes(&self) {
+        println!();
+        self.print_opcode_title();
+        self.overall.print("overall");
+        for i in 0..OPCODE_NUMBER {
+            let name = OpCode::new(i as u8);
+            if name.is_none() {
+                continue
+            }
+            self.opcode[i]
+                .as_ref()
+                .expect("opcode record should not empty")
+                .print(name.unwrap().as_str());
+        }
+        println!();
+    }
+
+    fn print_category(&self) {
+        println!("\n");
+        println!("==========================================================================================");
+        println!(
+            "{:<COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}",
+            "Opcode Cat.", "Count", "Count (%)", "Time (s)", "Time (%)", "Cost (ns)",
+        );
+
+        for (k, v) in self.merge_records.iter() {
+            if *k == "" {
+                continue
+            }
+            println!(
+                "{:<COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$.2}{:>COL_WIDTH$.1}{:>COL_WIDTH$.3}{:>COL_WIDTH$.3}",
+                *k,
+                v.count,
+                v.count_pct * 100.0,
+                cycles_as_secs(v.time),
+                v.time_pct * 100.0,
+                v.avg_cost,
+            );
+        }
+    }
+}
+
+trait SupportPrint {
+    fn stats(&self) -> OpcodeStats;
+    fn print_addition_count(&self);
+    fn print_sload_percentile(&self);
+}
+
+// Return (total_gas, static_gas, dyn_gas).
+fn caculate_gas(opcode: u8, count: u64, total_gas: i128) -> (f64, u64, f64) {
+    let (base_gas, is_static) = match MERGE_MAP[opcode as usize] {
+        Some(opcode_info) => (opcode_info.1.gas, opcode_info.1.static_gas),
+        None => return (0.0, 0, 0.0),
+    };
+
+    let total_static_gas = base_gas.checked_mul(count).unwrap_or(0);
+    if is_static {
+        return (total_static_gas as f64, base_gas, 0.0)
+    }
+
+    let dyn_gas = if total_gas > total_static_gas as i128 {
+        (total_gas - total_static_gas as i128) as f64 / count as f64
+    } else {
+        0.0
+    };
+
+    (total_gas as f64, base_gas, dyn_gas)
+}
+
+fn category_name(opcode: u8) -> Option<&'static str> {
+    Some(MERGE_MAP[opcode as usize]?.1.category)
+}
+
+impl SupportPrint for OpcodeRecord {
+    fn stats(&self) -> OpcodeStats {
+        let mut opcode_stats = OpcodeStats::default();
+        // induction
+        for (i, v) in self.opcode_record.iter().enumerate() {
+            // opcode
+            let op = i as u8;
+            let mut opcode_stat = OpcodeStat::default();
+            opcode_stat.count = v.0;
+            opcode_stat.time = v.1;
+            opcode_stat.avg_cost = convert_cycles_to_ns_f64(v.1) / v.0 as f64;
+            let (op_total, op_static, op_dyn) = caculate_gas(op, v.0, v.2);
+            opcode_stat.mgas = op_total / MGAS_TO_GAS as f64;
+            opcode_stat.static_gas = Some(op_static);
+            opcode_stat.dyn_gas = Some(op_dyn);
+
+            let cat = match category_name(i as u8) {
+                Some(name) => name,
+                None => "",
+            };
+            opcode_stat.cat = Some(cat);
+            opcode_stats.opcode[i] = Some(opcode_stat);
+
+            // overall
+            opcode_stats.overall.count =
+                opcode_stats.overall.count.checked_add(v.0).expect("overflow");
+            opcode_stats.overall.time =
+                opcode_stats.overall.time.checked_add(v.1).expect("overflow");
+            opcode_stats.overall.mgas += opcode_stats.opcode[i].as_ref().expect("empty").mgas;
+
+            // merge
+            opcode_stats
+                .merge_records
+                .entry(cat)
+                .and_modify(|r| {
+                    r.count += v.0;
+                    r.time += v.1;
+                })
+                .or_insert(OpcodeMergeRecord {
+                    count: v.0,
+                    count_pct: 0.0,
+                    time: v.1,
+                    time_pct: 0.0,
+                    avg_cost: 0.0,
+                });
+        }
+
+        // calculate opcode pct
+        for (i, _v) in self.opcode_record.iter().enumerate() {
+            opcode_stats.opcode[i].as_mut().expect("empty").count_pct =
+                opcode_stats.opcode[i].as_mut().expect("empty").count as f64 /
+                    opcode_stats.overall.count as f64;
+            opcode_stats.opcode[i].as_mut().expect("empty").time_pct =
+                opcode_stats.opcode[i].as_mut().expect("empty").time as f64 /
+                    opcode_stats.overall.time as f64;
+            opcode_stats.opcode[i].as_mut().expect("empty").mgas_pct =
+                opcode_stats.opcode[i].as_mut().expect("empty").mgas as f64 /
+                    opcode_stats.overall.mgas as f64;
+        }
+        opcode_stats.overall.count_pct = 1.0;
+        opcode_stats.overall.time_pct = 1.0;
+        opcode_stats.overall.mgas_pct = 1.0;
+        opcode_stats.overall.avg_cost =
+            convert_cycles_to_ns_f64(opcode_stats.overall.time) / opcode_stats.overall.count as f64;
+
+        // calculate merge opcode pct
+        for (_, value) in opcode_stats.merge_records.iter_mut() {
+            value.count_pct = value.count as f64 / opcode_stats.overall.count as f64;
+            value.time_pct = value.time as f64 / opcode_stats.overall.time as f64;
+            value.avg_cost = convert_cycles_to_ns_f64(value.time) / value.count as f64;
+        }
+
+        opcode_stats
+    }
+
+    fn print_addition_count(&self) {
+        println!();
+        println!("call additional rdtsc count: {}", self.additional_count[0]);
+        println!("call_code additional rdtsc count: {}", self.additional_count[1]);
+        println!("delegate_call additional rdtsc count: {}", self.additional_count[2]);
+        println!("static_call additional rdtsc count: {}", self.additional_count[3]);
+        println!();
+    }
+
+    fn print_sload_percentile(&self) {
+        println!("=============sload time percentile=============");
+        self.sload_percentile.print_content();
+    }
+}
+
+impl Print for OpcodeRecord {
+    fn print(&self, _block_number: u64) {
+        let opcode_stats = self.stats();
+        opcode_stats.print_opcodes();
+        opcode_stats.print_category();
+        self.print_addition_count();
+        self.print_sload_percentile();
+    }
+}

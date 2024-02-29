@@ -50,7 +50,7 @@ enable_cache_record = [
     "revm/enable_cache_record",
     "reth-provider/enable_cache_record",
 ]
-enable_execute_measure = [
-    "perf-metrics/enable_execute_measure",
+enable_execution_duration_record = [
+    "perf-metrics/enable_execution_duration_record",
     "revm/enable_transact_measure",
 ]

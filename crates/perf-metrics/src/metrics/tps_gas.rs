@@ -1,8 +1,10 @@
+//! This module is used to track the total number of transactions
+//! and total gas consumed so far.
 #[derive(Debug, Default, Copy, Clone)]
 pub struct TpsGasRecord {
-    block_number: u64,
-    txs: u128,
-    gas: u128,
+    pub block_number: u64,
+    pub txs: u128,
+    pub gas: u128,
 }
 
 impl TpsGasRecord {
@@ -11,16 +13,10 @@ impl TpsGasRecord {
         self.txs = self.txs.checked_add(txs).expect("overflow");
         self.gas = self.gas.checked_add(gas).expect("overflow");
     }
+}
 
-    pub fn block_number(&self) -> u64 {
-        self.block_number
-    }
-
-    pub fn txs(&self) -> u128 {
-        self.txs
-    }
-
-    pub fn gas(&self) -> u128 {
-        self.gas
-    }
+#[derive(Debug, Copy, Clone)]
+pub enum TpsAndGasMessage {
+    Switch(bool),
+    Record(TpsGasRecord),
 }
