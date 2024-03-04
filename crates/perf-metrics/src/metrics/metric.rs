@@ -328,25 +328,16 @@ fn record_revert_storage_append_time() {
     recorder().duration_record.write_to_db.record_revert_storage_append_time();
 }
 
-/// Encapsulate this structure to record write_storage in revert state in a RAII manner.
+// Encapsulate this structure to record write_storage in revert state in a RAII manner.
 #[cfg(feature = "enable_execution_duration_record")]
-pub struct RevertsStorageWrite(usize);
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl RevertsStorageWrite {
-    pub fn new(size: usize) -> Self {
-        start_write_to_db_write_record();
-        Self(size)
-    }
-}
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl Drop for RevertsStorageWrite {
-    fn drop(&mut self) {
-        record_revert_storage_append_time();
-        record_revert_storage_size(self.0);
-    }
-}
+impl_write_macro!(
+    RevertsStorageWrite,
+    start_write_to_db_write_record,
+    record_revert_storage_append_time,
+    record_revert_storage_size,
+    record_receipts_append_time,
+    record_write_receipts_size
+);
 
 /// Record time of write storage changes in StateReverts's write_to_db.
 #[cfg(feature = "enable_execution_duration_record")]
@@ -366,25 +357,16 @@ fn record_revert_account_append_time() {
     recorder().duration_record.write_to_db.record_revert_account_append_time();
 }
 
-/// Encapsulate this structure to record write_account in revert state in a RAII manner.
+// Encapsulate this structure to record write_account in revert state in a RAII manner.
 #[cfg(feature = "enable_execution_duration_record")]
-pub struct RevertsAccountWrite(usize);
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl RevertsAccountWrite {
-    pub fn new(size: usize) -> Self {
-        start_write_to_db_write_record();
-        Self(size)
-    }
-}
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl Drop for RevertsAccountWrite {
-    fn drop(&mut self) {
-        record_revert_account_append_time();
-        record_revert_account_size(self.0);
-    }
-}
+impl_write_macro!(
+    RevertsAccountWrite,
+    start_write_to_db_write_record,
+    record_revert_account_append_time,
+    record_revert_account_size,
+    record_receipts_append_time,
+    record_write_receipts_size
+);
 
 /// Record time of write account changes in StateReverts's write_to_db.
 #[cfg(feature = "enable_execution_duration_record")]
@@ -404,25 +386,16 @@ fn record_receipts_append_time() {
     recorder().duration_record.write_to_db.record_receipts_append_time();
 }
 
-/// Encapsulate this structure to record write receipts in a RAII manner.
+// Encapsulate this structure to record write receipts in a RAII manner.
 #[cfg(feature = "enable_execution_duration_record")]
-pub struct ReceiptsWrite(usize);
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl ReceiptsWrite {
-    pub fn new(size: usize) -> Self {
-        start_write_to_db_write_record();
-        Self(size)
-    }
-}
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl Drop for ReceiptsWrite {
-    fn drop(&mut self) {
-        record_receipts_append_time();
-        record_write_receipts_size(self.0);
-    }
-}
+impl_write_macro!(
+    ReceiptsWrite,
+    start_write_to_db_write_record,
+    record_receipts_append_time,
+    record_write_receipts_size,
+    record_receipts_append_time,
+    record_write_receipts_size
+);
 
 /// Record time of write receipts  in BundleStateWithReceipts's write_to_db.
 #[cfg(feature = "enable_execution_duration_record")]
@@ -448,25 +421,16 @@ fn record_state_account_upsert_time() {
     recorder().duration_record.write_to_db.record_state_account_upsert_time();
 }
 
-/// Encapsulate this structure to record write_account in state changes in a RAII manner.
+// Encapsulate this structure to record write_account in state changes in a RAII manner.
 #[cfg(feature = "enable_execution_duration_record")]
-pub struct StateAccountWrite(usize);
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl StateAccountWrite {
-    pub fn new(size: usize) -> Self {
-        start_write_to_db_write_record();
-        Self(size)
-    }
-}
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl Drop for StateAccountWrite {
-    fn drop(&mut self) {
-        record_state_account_upsert_time();
-        record_state_account_size(self.0);
-    }
-}
+impl_write_macro!(
+    StateAccountWrite,
+    start_write_to_db_write_record,
+    record_state_account_upsert_time,
+    record_state_account_size,
+    record_receipts_append_time,
+    record_write_receipts_size
+);
 
 /// Record time of write account in StateChanges's write_to_db.
 #[cfg(feature = "enable_execution_duration_record")]
@@ -486,25 +450,16 @@ fn record_state_bytecode_upsert_time() {
     recorder().duration_record.write_to_db.record_state_bytecode_upsert_time();
 }
 
-/// Encapsulate this structure to record write_bytecode in state changes in a RAII manner.
+// Encapsulate this structure to record write_bytecode in state changes in a RAII manner.
 #[cfg(feature = "enable_execution_duration_record")]
-pub struct StateBytecodeWrite(usize);
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl StateBytecodeWrite {
-    pub fn new(size: usize) -> Self {
-        start_write_to_db_write_record();
-        Self(size)
-    }
-}
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl Drop for StateBytecodeWrite {
-    fn drop(&mut self) {
-        record_state_bytecode_upsert_time();
-        record_state_bytecode_size(self.0);
-    }
-}
+impl_write_macro!(
+    StateBytecodeWrite,
+    start_write_to_db_write_record,
+    record_state_bytecode_upsert_time,
+    record_state_bytecode_size,
+    record_receipts_append_time,
+    record_write_receipts_size
+);
 
 /// Record time of write bytecode in StateChanges's write_to_db.
 #[cfg(feature = "enable_execution_duration_record")]
@@ -524,25 +479,16 @@ fn record_state_storage_upsert_time() {
     recorder().duration_record.write_to_db.record_state_storage_upsert_time();
 }
 
-/// Encapsulate this structure to record write_storage in state changes in a RAII manner.
+// Encapsulate this structure to record write_storage in state changes in a RAII manner.
 #[cfg(feature = "enable_execution_duration_record")]
-pub struct StateStorageWrite(usize);
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl StateStorageWrite {
-    pub fn new(size: usize) -> Self {
-        start_write_to_db_write_record();
-        Self(size)
-    }
-}
-
-#[cfg(feature = "enable_execution_duration_record")]
-impl Drop for StateStorageWrite {
-    fn drop(&mut self) {
-        record_state_storage_upsert_time();
-        record_state_storage_size(self.0);
-    }
-}
+impl_write_macro!(
+    StateStorageWrite,
+    start_write_to_db_write_record,
+    record_state_storage_upsert_time,
+    record_state_storage_size,
+    record_receipts_append_time,
+    record_write_receipts_size
+);
 
 /// Record time of write storage in StateChanges's write_to_db.
 #[cfg(feature = "enable_execution_duration_record")]
