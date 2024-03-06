@@ -9,6 +9,7 @@ use std::{
     feature = "enable_opcode_metrics",
     feature = "enable_cache_record",
     feature = "enable_execution_duration_record",
+    feature = "enable_state_root_record",
 ))]
 use super::commons::*;
 
@@ -17,8 +18,6 @@ use tokio::sync::mpsc::UnboundedReceiver;
 
 #[cfg(feature = "enable_tps_gas_record")]
 use super::tps_gas::TpsAndGasDisplayer;
-#[cfg(feature = "enable_state_root_record")]
-use super::displayer::StateRootUpdateDisplayer;
 
 #[derive(Debug)]
 pub struct DashboardListener {
@@ -26,8 +25,6 @@ pub struct DashboardListener {
 
     #[cfg(feature = "enable_tps_gas_record")]
     tps_gas_displayer: TpsAndGasDisplayer,
-    #[cfg(feature = "enable_state_root_record")]
-    state_root_update_displayer: StateRootUpdateDisplayer,
 }
 
 impl DashboardListener {
@@ -38,8 +35,6 @@ impl DashboardListener {
 
             #[cfg(feature = "enable_tps_gas_record")]
             tps_gas_displayer: TpsAndGasDisplayer::default(),
-            #[cfg(feature = "enable_state_root_record")]
-            state_root_update_displayer: StateRootUpdateDisplayer::default(),
         }
     }
 
@@ -63,17 +58,8 @@ impl DashboardListener {
                 record.print(block_number);
             }
             #[cfg(feature = "enable_state_root_record")]
-            MetricEvent::StateRootUpdate { record } => {
-                self.state_root_update_displayer.record(record);
-                // self.state_root_update_displayer.print();
-            }
-            #[cfg(feature = "enable_state_root_record")]
-            MetricEvent::StateRootRecordUpdate { record } => {
-                self.state_root_update_displayer.update_record(record);
-            }
-            #[cfg(feature = "enable_state_root_record")]
-            MetricEvent::StateRootUpdatePrint {} => {
-                self.state_root_update_displayer.print();
+            MetricEvent::StateRootRecordUpdate { block_number, record } => {
+                record.print(block_number);
             }
         }
     }

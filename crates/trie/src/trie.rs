@@ -171,14 +171,7 @@ where
     /// The intermediate progress of state root computation and the trie updates.
     pub fn root_with_updates(self) -> Result<(B256, TrieUpdates), StateRootError> {
         #[cfg(feature = "enable_state_root_record")]
-        perf_metrics::record_changes(
-            self.prefix_sets.account_prefix_set.len() as u64,
-            self.prefix_sets.storage_prefix_sets.len() as u64,
-            self.prefix_sets.storage_prefix_sets.iter().map(|(_, v)| v.len() as u64).sum::<u64>(),
-        );
-
-        #[cfg(feature = "enable_state_root_record")]
-        perf_metrics::metrics::metric::state_root::common::add_update_keys(
+        perf_metrics::common::add_update_keys(
             self.prefix_sets.account_prefix_set.len() as u64,
             self.prefix_sets.storage_prefix_sets.iter().map(|(_, v)| v.len() as u64).sum::<u64>(),
         );
@@ -213,23 +206,11 @@ where
     }
 
     fn calculate(self, retain_updates: bool) -> Result<StateRootProgress, StateRootError> {
-        // #[cfg(feature = "enable_state_root_record")]
-        // let _cal = perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::StateCalculate);
-
-        #[cfg(feature = "enable_state_root_record")]
-        let (_hash_switcher, _dbswitcher, timer, _caculate_record, _cal) = (
-            perf_metrics::HashSwither::new(),
-            perf_metrics::DBSwither::new(),
-            perf_metrics::Timer::default(),
-            perf_metrics::StateCaculateRecord::default(),
-            perf_metrics::TimeRecorder2::new(perf_metrics::FunctionName::StateCalculate),
-        );
-
         #[cfg(feature = "enable_state_root_record")]
         let (start_timer, _caculate_timer) = (
-            perf_metrics::Timer::default(),
-            perf_metrics::state_root::recorder::TimeRecorder::new(
-                perf_metrics::metrics::metric::state_root::caculate::add_state_calculate_time,
+            perf_metrics::metrics::Timer::default(),
+            perf_metrics::metrics::TimeRecorder::new(
+                perf_metrics::caculate::add_state_calculate_time,
             ),
         );
 
@@ -265,34 +246,22 @@ where
         let mut hashed_entries_walked = 0;
 
         #[cfg(feature = "enable_state_root_record")]
-        perf_metrics::add_state_before_loop(timer.cycles_since());
-
-        #[cfg(feature = "enable_state_root_record")]
-        perf_metrics::metrics::metric::state_root::caculate::add_state_before_loop_time(
-            start_timer.cycles_since(),
-        );
+        perf_metrics::caculate::add_state_before_loop_time(start_timer.cycles_since());
 
         while let Some(node) = account_node_iter.try_next()? {
             match node {
                 AccountNode::Branch(node) => {
                     #[cfg(feature = "enable_state_root_record")]
-                    let _add_branch_record = perf_metrics::StateAddBranchRecord::default();
-
-                    #[cfg(feature = "enable_state_root_record")]
-                    let _add_at_branch_node = perf_metrics::state_root::recorder::CountAndTimeRecorder::new(
-                        perf_metrics::metrics::metric::state_root::caculate::add_state_add_branch,
+                    let _add_at_branch_node = perf_metrics::metrics::CountAndTimeRecorder::new(
+                        perf_metrics::caculate::add_state_add_branch,
                     );
 
                     hash_builder.add_branch(node.key, node.value, node.children_are_in_trie);
                 }
                 AccountNode::Leaf(hashed_address, account) => {
                     #[cfg(feature = "enable_state_root_record")]
-                    let _cal_storage_root_and_add_leaf_record =
-                        perf_metrics::StateCalStorageRootAndAddLeafRecord::default();
-
-                    #[cfg(feature = "enable_state_root_record")]
-                    let _add_state_cal_storage_root_and_add_leaf = perf_metrics::state_root::recorder::TimeRecorder::new(
-                        perf_metrics::metrics::metric::state_root::caculate::add_state_cal_storage_root_and_add_leaf_time,
+                    let _add_state_cal_storage_root_and_add_leaf = perf_metrics::metrics::TimeRecorder::new(
+                        perf_metrics::caculate::add_state_cal_storage_root_and_add_leaf_time,
                     );
 
                     hashed_entries_walked += 1;
@@ -328,12 +297,8 @@ where
                     };
 
                     #[cfg(feature = "enable_state_root_record")]
-                    let _add_after_cal_storage_root_record =
-                        perf_metrics::StateAfterCalStorageRootRecord::default();
-
-                    #[cfg(feature = "enable_state_root_record")]
-                    let _add_state_after_cal_storage_root = perf_metrics::state_root::recorder::TimeRecorder::new(
-                        perf_metrics::metrics::metric::state_root::caculate::add_state_after_cal_storage_root_time,
+                    let _add_state_after_cal_storage_root = perf_metrics::metrics::TimeRecorder::new(
+                        perf_metrics::caculate::add_state_after_cal_storage_root_time,
                     );
 
                     let account = TrieAccount::from((account, storage_root));
@@ -343,11 +308,8 @@ where
 
                     {
                         #[cfg(feature = "enable_state_root_record")]
-                        let _add_leaf_record = perf_metrics::StateAddLeafRecord::default();
-
-                        #[cfg(feature = "enable_state_root_record")]
-                        let _add_state_add_leaf = perf_metrics::state_root::recorder::CountAndTimeRecorder::new(
-                            perf_metrics::metrics::metric::state_root::caculate::add_state_add_leaf,
+                        let _add_state_add_leaf = perf_metrics::metrics::CountAndTimeRecorder::new(
+                            perf_metrics::caculate::add_state_add_leaf,
                         );
 
                         hash_builder.add_leaf(Nibbles::unpack(hashed_address), &account_rlp);
@@ -358,10 +320,8 @@ where
                     #[cfg(feature = "enable_state_root_record")]
                     {
                         if EMPTY_ROOT_HASH == storage_root {
-                            perf_metrics::add_storage_mpt_empty_hash_number(1);
                             hash_builder.set_storage_root(None);
                         } else {
-                            perf_metrics::add_storage_mpt_not_empty_hash_number(1);
                             unsafe {
                                 hash_builder.set_storage_root(STRORAGE_ROOT_NODE);
                             }
@@ -397,24 +357,17 @@ where
 
         let root = {
             #[cfg(feature = "enable_state_root_record")]
-            let _add_state_root = perf_metrics::StateAddRootRecord::default();
-
-            #[cfg(feature = "enable_state_root_record")]
-            let _add_state_add_root = perf_metrics::state_root::recorder::CountAndTimeRecorder::new(
-                perf_metrics::metrics::metric::state_root::caculate::add_state_add_root,
+            let _add_state_add_root = perf_metrics::metrics::CountAndTimeRecorder::new(
+                perf_metrics::caculate::add_state_add_root,
             );
 
             hash_builder.root()
         };
 
         #[cfg(feature = "enable_state_root_record")]
-        let _after_loop_record = perf_metrics::StateAfterLoopRecord::default();
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _add_state_after_cal_storage_root =
-            perf_metrics::state_root::recorder::TimeRecorder::new(
-                perf_metrics::metrics::metric::state_root::caculate::add_state_after_add_root_time,
-            );
+        let _add_state_after_cal_storage_root = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::caculate::add_state_after_add_root_time,
+        );
 
         #[cfg(feature = "enable_state_root_record")]
         let account_root_node = hash_builder.root_tree_node();
@@ -422,33 +375,14 @@ where
         #[cfg(feature = "enable_state_root_record")]
         {
             let keccak256_record = reth_primitives::trie::metric::get_keccak256_record();
-            perf_metrics::record_keccak256(keccak256_record);
-
-            perf_metrics::metrics::metric::state_root::hash::add_keccak256(keccak256_record);
+            perf_metrics::hash::add_keccak256(keccak256_record);
         }
 
         let (_, walker_updates) = account_node_iter.walker.split();
         let (_, hash_builder_updates) = hash_builder.split();
 
         #[cfg(feature = "enable_state_root_record")]
-        perf_metrics::add_account_mpt_info(
-            account_root_node,
-            walker_updates
-                .len()
-                .checked_add(self.prefix_sets.destroyed_accounts.len())
-                .expect("overflow") as u64,
-            hash_builder_updates.len() as u64,
-        );
-
-        #[cfg(feature = "enable_state_root_record")]
-        perf_metrics::metrics::metric::state_root::mpt::add_state_mpt_info(
-            account_root_node,
-            walker_updates
-                .len()
-                .checked_add(self.prefix_sets.destroyed_accounts.len())
-                .expect("overflow") as u64,
-            hash_builder_updates.len() as u64,
-        );
+        perf_metrics::mpt::add_state_mpt_info(account_root_node);
 
         trie_updates.extend(walker_updates.into_iter());
         trie_updates.extend_with_account_updates(hash_builder_updates);
@@ -560,22 +494,6 @@ where
         self,
         retain_updates: bool,
     ) -> Result<(B256, usize, TrieUpdates), StorageRootError> {
-        // #[cfg(feature = "enable_state_root_record")]
-        // let _cal = perf_metrics::TimeRecorder::new(perf_metrics::FunctionName::StorageCalculate);
-
-        #[cfg(feature = "enable_state_root_record")]
-        let (timer, _calculate_record, _cal) = {
-            unsafe {
-                STRORAGE_ROOT_NODE = None;
-            }
-
-            (
-                perf_metrics::Timer::default(),
-                perf_metrics::StorageCalculateRecord::default(),
-                perf_metrics::TimeRecorder2::new(perf_metrics::FunctionName::StorageCalculate),
-            )
-        };
-
         #[cfg(feature = "enable_state_root_record")]
         let (start_timer, _caculate_timer) = {
             unsafe {
@@ -583,9 +501,9 @@ where
             }
 
             (
-                perf_metrics::Timer::default(),
-                perf_metrics::state_root::recorder::TimeRecorder::new(
-                    perf_metrics::metrics::metric::state_root::caculate::add_storage_calculate_time,
+                perf_metrics::metrics::Timer::default(),
+                perf_metrics::metrics::TimeRecorder::new(
+                    perf_metrics::caculate::add_storage_calculate_time,
                 ),
             )
         };
@@ -612,10 +530,7 @@ where
             StorageNodeIter::new(walker, hashed_storage_cursor, self.hashed_address);
 
         #[cfg(feature = "enable_state_root_record")]
-        perf_metrics::add_storage_before_loop(timer.cycles_since());
-
-        #[cfg(feature = "enable_state_root_record")]
-        perf_metrics::metrics::metric::state_root::caculate::add_storage_before_loop_time(
+        perf_metrics::caculate::add_storage_before_loop_time(
             start_timer.cycles_since(),
         );
 
@@ -623,22 +538,16 @@ where
             match node {
                 StorageNode::Branch(node) => {
                     #[cfg(feature = "enable_state_root_record")]
-                    let _add_branch_record = perf_metrics::StorageAddBranchRecord::default();
-
-                    #[cfg(feature = "enable_state_root_record")]
-                    let _add_storage_add_branch = perf_metrics::state_root::recorder::CountAndTimeRecorder::new(
-                        perf_metrics::metrics::metric::state_root::caculate::add_storage_add_branch,
+                    let _add_storage_add_branch = perf_metrics::metrics::CountAndTimeRecorder::new(
+                        perf_metrics::caculate::add_storage_add_branch,
                     );
 
                     hash_builder.add_branch(node.key, node.value, node.children_are_in_trie);
                 }
                 StorageNode::Leaf(hashed_slot, value) => {
                     #[cfg(feature = "enable_state_root_record")]
-                    let _add_leaf_record = perf_metrics::StorageAddLeafRecord::default();
-
-                    #[cfg(feature = "enable_state_root_record")]
-                    let _add_storage_add_leaf = perf_metrics::state_root::recorder::CountAndTimeRecorder::new(
-                        perf_metrics::metrics::metric::state_root::caculate::add_storage_add_leaf,
+                    let _add_storage_add_leaf = perf_metrics::metrics::CountAndTimeRecorder::new(
+                        perf_metrics::caculate::add_storage_add_leaf,
                     );
 
                     storage_slots_walked += 1;
@@ -652,23 +561,16 @@ where
 
         let root = {
             #[cfg(feature = "enable_state_root_record")]
-            let _add_storage_root = perf_metrics::StorageAddRootRecord::default();
-
-            #[cfg(feature = "enable_state_root_record")]
-            let _add_storage_add_root =
-                perf_metrics::state_root::recorder::CountAndTimeRecorder::new(
-                    perf_metrics::metrics::metric::state_root::caculate::add_storage_add_root,
-                );
+            let _add_storage_add_root = perf_metrics::metrics::CountAndTimeRecorder::new(
+                perf_metrics::caculate::add_storage_add_root,
+            );
 
             hash_builder.root()
         };
 
         #[cfg(feature = "enable_state_root_record")]
-        let _after_loop_record = perf_metrics::StorageAfterLoopRecord::default();
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _add_storage_after_add_root = perf_metrics::state_root::recorder::TimeRecorder::new(
-            perf_metrics::metrics::metric::state_root::caculate::add_storage_after_add_root_time,
+        let _add_storage_after_add_root = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::caculate::add_storage_after_add_root_time,
         );
 
         #[cfg(feature = "enable_state_root_record")]
@@ -679,30 +581,13 @@ where
 
         #[cfg(feature = "enable_state_root_record")]
         {
-            let tmp_node = if EMPTY_ROOT_HASH == root {
-                None
-            } else {
-                if storage_root_node.trie_node != storage_root_node.state_node {
-                    println!("-------------------storage calculate error!-------------------");
-                }
-                Some(storage_root_node)
-            };
+            let tmp_node = if EMPTY_ROOT_HASH == root { None } else { Some(storage_root_node) };
 
             unsafe {
                 STRORAGE_ROOT_NODE = tmp_node;
             }
 
-            perf_metrics::add_storage_mpt_info(
-                storage_root_node,
-                walker_updates.len() as u64,
-                hash_builder_updates.len() as u64,
-            );
-
-            perf_metrics::metrics::metric::state_root::mpt::add_storage_mpt_info(
-                storage_root_node,
-                walker_updates.len() as u64,
-                hash_builder_updates.len() as u64,
-            );
+            perf_metrics::mpt::add_storage_mpt_info(storage_root_node);
         }
 
         let mut trie_updates = TrieUpdates::default();

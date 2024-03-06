@@ -6,13 +6,14 @@ mod execute_measure;
 #[cfg(feature = "enable_tps_gas_record")]
 mod tps_gas;
 
+#[cfg(feature = "enable_state_root_record")]
+mod merkle_measure;
+#[cfg(feature = "enable_state_root_record")]
+mod recorder;
+#[cfg(feature = "enable_state_root_record")]
+mod state_root;
+
 pub mod metric;
-
-#[cfg(feature = "enable_state_root_record")]
-pub mod state_root;
-
-#[cfg(feature = "enable_state_root_record")]
-pub mod time_distribution_stats;
 
 #[cfg(feature = "enable_execution_duration_record")]
 pub(crate) use duration::{ExecuteTxsRecord, ExecutionDurationRecord, WriteToDbRecord};
@@ -24,4 +25,4 @@ pub use tps_gas::{TpsAndGasMessage, TpsGasRecord};
 pub use state_root::*;
 
 #[cfg(feature = "enable_state_root_record")]
-pub use time_distribution_stats::*;
+pub use recorder::*;

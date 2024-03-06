@@ -16,11 +16,8 @@ impl HashedStateChanges {
     /// Write the bundle state to the database.
     pub fn write_to_db<TX: DbTxMut + DbTx>(self, tx: &TX) -> Result<(), DatabaseError> {
         #[cfg(feature = "enable_state_root_record")]
-        let _recoder = perf_metrics::TimeRecorder2::new(perf_metrics::FunctionName::HashedState);
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _add_hashed_state_write_time = perf_metrics::state_root::recorder::TimeRecorder::new(
-            perf_metrics::metrics::metric::state_root::common::add_hashed_state_write_time,
+        let _add_hashed_state_write_time = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::common::add_hashed_state_write_time,
         );
 
         // Write hashed account updates.

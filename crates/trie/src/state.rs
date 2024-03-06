@@ -168,12 +168,8 @@ impl HashedPostState {
     /// post state.
     pub fn construct_prefix_sets(&self) -> TriePrefixSets {
         #[cfg(feature = "enable_state_root_record")]
-        let _recoder =
-            perf_metrics::TimeRecorder2::new(perf_metrics::FunctionName::ConstructPrefixSets);
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _add_construct_prefix_sets_time = perf_metrics::state_root::recorder::TimeRecorder::new(
-            perf_metrics::metrics::metric::state_root::common::add_construct_prefix_sets_time,
+        let _add_construct_prefix_sets_time = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::common::add_construct_prefix_sets_time,
         );
 
         // Populate account prefix set.

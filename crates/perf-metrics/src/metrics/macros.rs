@@ -67,3 +67,16 @@ macro_rules! impl_write_macro {
         }
     };
 }
+
+#[cfg(feature = "enable_state_root_record")]
+macro_rules! add_function {
+    ($function_name:ident | [$($field_name:ident)|+] | [$($var_name:ident)|+]) => {
+        pub fn $function_name($($var_name: u64),*) {
+            let tmp = &mut $crate::metrics::metric::recorder().$($field_name).*;
+
+            $(
+                tmp.$var_name = tmp.$var_name.checked_add($var_name).expect("overflow");
+            )*
+        }
+    };
+}

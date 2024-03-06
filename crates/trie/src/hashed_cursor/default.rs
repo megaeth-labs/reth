@@ -25,24 +25,16 @@ where
 {
     fn seek(&mut self, key: B256) -> Result<Option<(B256, Account)>, reth_db::DatabaseError> {
         #[cfg(feature = "enable_state_root_record")]
-        let _db_seek = perf_metrics::state_root::DBRecorder::new(
-            perf_metrics::metrics::metric::state_root::db::add_seek,
-        );
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _db_seek_ = perf_metrics::DBSeekRead::default();
+        let _db_seek =
+            perf_metrics::metrics::DBRecorder::new(perf_metrics::db::add_seek);
 
         self.seek(key)
     }
 
     fn next(&mut self) -> Result<Option<(B256, Account)>, reth_db::DatabaseError> {
         #[cfg(feature = "enable_state_root_record")]
-        let _db_seek_ = perf_metrics::state_root::DBRecorder::new(
-            perf_metrics::metrics::metric::state_root::db::add_next,
-        );
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _db_next_ = perf_metrics::DBNextRead::default();
+        let _db_seek_ =
+            perf_metrics::metrics::DBRecorder::new(perf_metrics::db::add_next);
 
         self.next()
     }
@@ -55,12 +47,9 @@ where
     fn is_storage_empty(&mut self, key: B256) -> Result<bool, reth_db::DatabaseError> {
         let db_entry = {
             #[cfg(feature = "enable_state_root_record")]
-            let _db_seek_exact = perf_metrics::state_root::DBRecorder::new(
-                perf_metrics::metrics::metric::state_root::db::add_seek_exact,
+            let _db_seek_exact = perf_metrics::metrics::DBRecorder::new(
+                perf_metrics::db::add_seek_exact,
             );
-
-            #[cfg(feature = "enable_state_root_record")]
-            let _db_seek_exact_ = perf_metrics::DBSeekExactRead::default();
 
             self.seek_exact(key)?
         };
@@ -74,24 +63,17 @@ where
         subkey: B256,
     ) -> Result<Option<StorageEntry>, reth_db::DatabaseError> {
         #[cfg(feature = "enable_state_root_record")]
-        let _db_seek_by_key_subkey = perf_metrics::state_root::DBRecorder::new(
-            perf_metrics::metrics::metric::state_root::db::add_seek_by_sub_key,
+        let _db_seek_by_key_subkey = perf_metrics::metrics::DBRecorder::new(
+            perf_metrics::db::add_seek_by_sub_key,
         );
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _db_seek_by_key_subkey_ = perf_metrics::DBSeekBySubKeyRead::default();
 
         self.seek_by_key_subkey(key, subkey)
     }
 
     fn next(&mut self) -> Result<Option<StorageEntry>, reth_db::DatabaseError> {
         #[cfg(feature = "enable_state_root_record")]
-        let _db_next_dup_val = perf_metrics::state_root::DBRecorder::new(
-            perf_metrics::metrics::metric::state_root::db::add_next_dup_val,
-        );
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _db_next_dup_val_ = perf_metrics::DBNextDupValRead::default();
+        let _db_next_dup_val =
+            perf_metrics::metrics::DBRecorder::new(perf_metrics::db::add_next_dup_val);
 
         self.next_dup_val()
     }

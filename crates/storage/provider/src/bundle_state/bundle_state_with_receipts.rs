@@ -135,12 +135,8 @@ impl BundleStateWithReceipts {
     /// See [HashedPostState::from_bundle_state] for more info.
     pub fn hash_state_slow(&self) -> HashedPostState {
         #[cfg(feature = "enable_state_root_record")]
-        let _recoder =
-            perf_metrics::TimeRecorder2::new(perf_metrics::FunctionName::HashedStateSlow);
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _add_hash_state_slow_time = perf_metrics::state_root::recorder::TimeRecorder::new(
-            perf_metrics::metrics::metric::state_root::common::add_hash_state_slow_time,
+        let _add_hash_state_slow_time = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::common::add_hash_state_slow_time,
         );
 
         HashedPostState::from_bundle_state(&self.bundle.state)
@@ -304,11 +300,8 @@ impl BundleStateWithReceipts {
         is_value_known: OriginalValuesKnown,
     ) -> Result<(), DatabaseError> {
         #[cfg(feature = "enable_state_root_record")]
-        let _state_write_to_db = perf_metrics::StateWriteToDBRecord::default();
-
-        #[cfg(feature = "enable_state_root_record")]
-        let _add_state_write_to_db_time = perf_metrics::state_root::recorder::TimeRecorder::new(
-            perf_metrics::metrics::metric::state_root::common::add_state_write_to_db_time,
+        let _add_state_write_to_db_time = perf_metrics::metrics::TimeRecorder::new(
+            perf_metrics::common::add_state_write_to_db_time,
         );
 
         #[cfg(feature = "enable_execution_duration_record")]

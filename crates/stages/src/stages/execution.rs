@@ -202,21 +202,14 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             let bundle_size_hint = executor.size_hint().unwrap_or_default() as u64;
             #[cfg(feature = "enable_state_root_record")]
             {
-                perf_metrics::reset_state_root_update_record(block_number);
-                perf_metrics::record_total_txs(block.body.len() as u64);
-
-                perf_metrics::metrics::metric::state_root::common::set_block_number(block_number);
-                perf_metrics::metrics::metric::state_root::common::add_total_txs_count(
-                    block.body.len() as u64,
-                );
+                perf_metrics::common::set_block_number(block_number);
+                perf_metrics::common::add_total_txs_count(block.body.len() as u64);
 
                 let mut state = executor.take_output_state();
                 let hashed_state = state.hash_state_slow();
                 let (_, trie_updates) = hashed_state
                     .state_root_with_updates(provider.tx_ref())
                     .map_err(Into::<DatabaseError>::into)?;
-
-                perf_metrics::record_mpt_updates_to_db(trie_updates.len() as u64);
 
                 state.set_first_block(block_number);
                 state.write_to_db(provider.tx_ref(), OriginalValuesKnown::Yes)?;
@@ -225,15 +218,6 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                     HashedStateChanges(hashed_state).write_to_db(provider.tx_ref())?;
                     trie_updates.flush(provider.tx_ref())?;
                 }
-
-                // let prune_modes = self.adjust_prune_modes(provider, start_block + 1, max_block)?;
-                // let prune_modes = self.prune_modes.clone();
-                // executor.set_prune_modes(prune_modes);
-                perf_metrics::send_state_root_update_message();
-
-                // if 0 == block_number % 10000 {
-                //     perf_metrics::send_state_root_update_print_message();
-                // }
             }
 
             if self.thresholds.is_end_of_batch(

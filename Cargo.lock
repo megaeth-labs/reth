@@ -350,7 +350,7 @@ dependencies = [
 [[package]]
 name = "alloy-trie"
 version = "0.2.1"
-source = "git+https://github.com/megaeth-labs/trie.git?branch=live-sync-v0.1.0-alpha.3#7b47939a0d0c152f2b3b068956cab1937dceb827"
+source = "git+https://github.com/megaeth-labs/trie.git?branch=live-sync-v0.1.0-alpha.3#121edcdeb2c93b36b0bcd247a75cc3330f4e34db"
 dependencies = [
  "alloy-primitives",
  "alloy-rlp",
