@@ -1,20 +1,24 @@
 //! This module is used to support the display of opcode statistics metrics.
+use super::commons::*;
 use revm::revm_opcode::*;
-use revm_utils::metrics::types::OpcodeRecord;
+use revm_utils::{metrics::types::OpcodeRecord, time_utils::convert_cycles_to_ns_f64};
+use std::collections::BTreeMap;
 
-pub(crate) const OPCODE_NUMBER: usize = 256;
+const MGAS_TO_GAS: u64 = 1_000_000u64;
+const COL_WIDTH: usize = 15;
+const OPCODE_NUMBER: usize = 256;
 
 #[derive(Debug, Clone, Copy, Default)]
-pub(crate) struct OpcodeInfo {
+struct OpcodeInfo {
     /// opcode category
-    pub(crate) category: &'static str,
+    category: &'static str,
     /// gas fee
-    pub(crate) gas: u64,
+    gas: u64,
     /// opcode cost a fixed gas fee?
-    pub(crate) static_gas: bool,
+    static_gas: bool,
 }
 
-pub(crate) const MERGE_MAP: [Option<(u8, OpcodeInfo)>; OPCODE_NUMBER] = [
+const MERGE_MAP: [Option<(u8, OpcodeInfo)>; OPCODE_NUMBER] = [
     Some((STOP, OpcodeInfo { category: "stop", gas: 0, static_gas: true })), //0x00
     Some((ADD, OpcodeInfo { category: "arithmetic", gas: 3, static_gas: true })), //0x01
     Some((MUL, OpcodeInfo { category: "arithmetic", gas: 5, static_gas: true })), //0x02
@@ -273,12 +277,6 @@ pub(crate) const MERGE_MAP: [Option<(u8, OpcodeInfo)>; OPCODE_NUMBER] = [
     Some((SELFDESTRUCT, OpcodeInfo { category: "host", gas: 5000, static_gas: false })), //0xff
 ];
 
-use super::commons::*;
-use revm_utils::time_utils::convert_cycles_to_ns_f64;
-use std::collections::BTreeMap;
-const MGAS_TO_GAS: u64 = 1_000_000u64;
-
-const COL_WIDTH: usize = 15;
 #[derive(Default, Debug)]
 struct OpcodeMergeRecord {
     count: u64,
@@ -338,6 +336,31 @@ impl OpcodeStat {
     }
 }
 
+// Return (total_gas, static_gas, dyn_gas).
+fn caculate_gas(opcode: u8, count: u64, total_gas: i128) -> (f64, u64, f64) {
+    let (base_gas, is_static) = match MERGE_MAP[opcode as usize] {
+        Some(opcode_info) => (opcode_info.1.gas, opcode_info.1.static_gas),
+        None => return (0.0, 0, 0.0),
+    };
+
+    let total_static_gas = base_gas.checked_mul(count).unwrap_or(0);
+    if is_static {
+        return (total_static_gas as f64, base_gas, 0.0)
+    }
+
+    let dyn_gas = if total_gas > total_static_gas as i128 {
+        (total_gas - total_static_gas as i128) as f64 / count as f64
+    } else {
+        0.0
+    };
+
+    (total_gas as f64, base_gas, dyn_gas)
+}
+
+fn category_name(opcode: u8) -> Option<&'static str> {
+    Some(MERGE_MAP[opcode as usize]?.1.category)
+}
+
 #[derive(Debug)]
 struct OpcodeStats {
     overall: OpcodeStat,
@@ -353,6 +376,82 @@ impl Default for OpcodeStats {
             opcode: [ARRAY_REPEAT_VALUE; OPCODE_NUMBER],
             merge_records: BTreeMap::new(),
         }
+    }
+}
+
+impl From<&OpcodeRecord> for OpcodeStats {
+    fn from(record: &OpcodeRecord) -> Self {
+        let mut opcode_stats = OpcodeStats::default();
+        // induction
+        for (i, v) in record.opcode_record.iter().enumerate() {
+            // opcode
+            let op = i as u8;
+            let mut opcode_stat = OpcodeStat::default();
+            opcode_stat.count = v.0;
+            opcode_stat.time = v.1;
+            opcode_stat.avg_cost = convert_cycles_to_ns_f64(v.1) / v.0 as f64;
+            let (op_total, op_static, op_dyn) = caculate_gas(op, v.0, v.2);
+            opcode_stat.mgas = op_total / MGAS_TO_GAS as f64;
+            opcode_stat.static_gas = Some(op_static);
+            opcode_stat.dyn_gas = Some(op_dyn);
+
+            let cat = match category_name(i as u8) {
+                Some(name) => name,
+                None => "",
+            };
+            opcode_stat.cat = Some(cat);
+            opcode_stats.opcode[i] = Some(opcode_stat);
+
+            // overall
+            opcode_stats.overall.count =
+                opcode_stats.overall.count.checked_add(v.0).expect("overflow");
+            opcode_stats.overall.time =
+                opcode_stats.overall.time.checked_add(v.1).expect("overflow");
+            opcode_stats.overall.mgas += opcode_stats.opcode[i].as_ref().expect("empty").mgas;
+
+            // merge
+            opcode_stats
+                .merge_records
+                .entry(cat)
+                .and_modify(|r| {
+                    r.count += v.0;
+                    r.time += v.1;
+                })
+                .or_insert(OpcodeMergeRecord {
+                    count: v.0,
+                    count_pct: 0.0,
+                    time: v.1,
+                    time_pct: 0.0,
+                    avg_cost: 0.0,
+                });
+        }
+
+        // calculate opcode pct
+        for (i, _v) in record.opcode_record.iter().enumerate() {
+            opcode_stats.opcode[i].as_mut().expect("empty").count_pct =
+                opcode_stats.opcode[i].as_mut().expect("empty").count as f64 /
+                    opcode_stats.overall.count as f64;
+            opcode_stats.opcode[i].as_mut().expect("empty").time_pct =
+                opcode_stats.opcode[i].as_mut().expect("empty").time as f64 /
+                    opcode_stats.overall.time as f64;
+            opcode_stats.opcode[i].as_mut().expect("empty").mgas_pct =
+                opcode_stats.opcode[i].as_mut().expect("empty").mgas as f64 /
+                    opcode_stats.overall.mgas as f64;
+        }
+        opcode_stats.overall.count_pct = 1.0;
+        opcode_stats.overall.time_pct = 1.0;
+        opcode_stats.overall.mgas_pct = 1.0;
+        opcode_stats.overall.avg_cost =
+            convert_cycles_to_ns_f64(opcode_stats.overall.time) / opcode_stats.overall.count as f64;
+
+        // calculate merge opcode pct
+        for (_, value) in opcode_stats.merge_records.iter_mut() {
+            value.count_pct = value.count as f64 / opcode_stats.overall.count as f64;
+            value.time_pct = value.time as f64 / opcode_stats.overall.time as f64;
+            value.avg_cost = convert_cycles_to_ns_f64(value.time) / value.count as f64;
+        }
+
+        opcode_stats
     }
 }
 
@@ -418,112 +517,12 @@ impl OpcodeStats {
     }
 }
 
-trait SupportPrint {
-    fn stats(&self) -> OpcodeStats;
+trait ExtraPrint {
     fn print_addition_count(&self);
     fn print_sload_percentile(&self);
 }
 
-// Return (total_gas, static_gas, dyn_gas).
-fn caculate_gas(opcode: u8, count: u64, total_gas: i128) -> (f64, u64, f64) {
-    let (base_gas, is_static) = match MERGE_MAP[opcode as usize] {
-        Some(opcode_info) => (opcode_info.1.gas, opcode_info.1.static_gas),
-        None => return (0.0, 0, 0.0),
-    };
-
-    let total_static_gas = base_gas.checked_mul(count).unwrap_or(0);
-    if is_static {
-        return (total_static_gas as f64, base_gas, 0.0)
-    }
-
-    let dyn_gas = if total_gas > total_static_gas as i128 {
-        (total_gas - total_static_gas as i128) as f64 / count as f64
-    } else {
-        0.0
-    };
-
-    (total_gas as f64, base_gas, dyn_gas)
-}
-
-fn category_name(opcode: u8) -> Option<&'static str> {
-    Some(MERGE_MAP[opcode as usize]?.1.category)
-}
-
-impl SupportPrint for OpcodeRecord {
-    fn stats(&self) -> OpcodeStats {
-        let mut opcode_stats = OpcodeStats::default();
-        // induction
-        for (i, v) in self.opcode_record.iter().enumerate() {
-            // opcode
-            let op = i as u8;
-            let mut opcode_stat = OpcodeStat::default();
-            opcode_stat.count = v.0;
-            opcode_stat.time = v.1;
-            opcode_stat.avg_cost = convert_cycles_to_ns_f64(v.1) / v.0 as f64;
-            let (op_total, op_static, op_dyn) = caculate_gas(op, v.0, v.2);
-            opcode_stat.mgas = op_total / MGAS_TO_GAS as f64;
-            opcode_stat.static_gas = Some(op_static);
-            opcode_stat.dyn_gas = Some(op_dyn);
-
-            let cat = match category_name(i as u8) {
-                Some(name) => name,
-                None => "",
-            };
-            opcode_stat.cat = Some(cat);
-            opcode_stats.opcode[i] = Some(opcode_stat);
-
-            // overall
-            opcode_stats.overall.count =
-                opcode_stats.overall.count.checked_add(v.0).expect("overflow");
-            opcode_stats.overall.time =
-                opcode_stats.overall.time.checked_add(v.1).expect("overflow");
-            opcode_stats.overall.mgas += opcode_stats.opcode[i].as_ref().expect("empty").mgas;
-
-            // merge
-            opcode_stats
-                .merge_records
-                .entry(cat)
-                .and_modify(|r| {
-                    r.count += v.0;
-                    r.time += v.1;
-                })
-                .or_insert(OpcodeMergeRecord {
-                    count: v.0,
-                    count_pct: 0.0,
-                    time: v.1,
-                    time_pct: 0.0,
-                    avg_cost: 0.0,
-                });
-        }
-
-        // calculate opcode pct
-        for (i, _v) in self.opcode_record.iter().enumerate() {
-            opcode_stats.opcode[i].as_mut().expect("empty").count_pct =
-                opcode_stats.opcode[i].as_mut().expect("empty").count as f64 /
-                    opcode_stats.overall.count as f64;
-            opcode_stats.opcode[i].as_mut().expect("empty").time_pct =
-                opcode_stats.opcode[i].as_mut().expect("empty").time as f64 /
-                    opcode_stats.overall.time as f64;
-            opcode_stats.opcode[i].as_mut().expect("empty").mgas_pct =
-                opcode_stats.opcode[i].as_mut().expect("empty").mgas as f64 /
-                    opcode_stats.overall.mgas as f64;
-        }
-        opcode_stats.overall.count_pct = 1.0;
-        opcode_stats.overall.time_pct = 1.0;
-        opcode_stats.overall.mgas_pct = 1.0;
-        opcode_stats.overall.avg_cost =
-            convert_cycles_to_ns_f64(opcode_stats.overall.time) / opcode_stats.overall.count as f64;
-
-        // calculate merge opcode pct
-        for (_, value) in opcode_stats.merge_records.iter_mut() {
-            value.count_pct = value.count as f64 / opcode_stats.overall.count as f64;
-            value.time_pct = value.time as f64 / opcode_stats.overall.time as f64;
-            value.avg_cost = convert_cycles_to_ns_f64(value.time) / value.count as f64;
-        }
-
-        opcode_stats
-    }
-
+impl ExtraPrint for OpcodeRecord {
     fn print_addition_count(&self) {
         println!();
         println!("call additional rdtsc count: {}", self.additional_count[0]);
@@ -541,7 +540,7 @@ impl SupportPrint for OpcodeRecord {
 
 impl Print for OpcodeRecord {
     fn print(&self, _block_number: u64) {
-        let opcode_stats = self.stats();
+        let opcode_stats: OpcodeStats = self.into();
         opcode_stats.print_opcodes();
         opcode_stats.print_category();
         self.print_addition_count();
