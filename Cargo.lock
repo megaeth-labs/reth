@@ -4969,9 +4969,7 @@ name = "perf-metrics"
 version = "0.1.0"
 dependencies = [
  "ctor 0.2.6",
- "libc",
  "minstant",
- "reth-mdbx-sys",
  "revm",
  "revm-utils",
  "tokio",
@@ -6250,7 +6248,6 @@ dependencies = [
  "libc",
  "libffi",
  "parking_lot 0.12.1",
- "perf-metrics",
  "pprof",
  "rand 0.8.5",
  "rand_xorshift",

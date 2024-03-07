@@ -2,9 +2,9 @@
 //! and total gas consumed so far.
 #[derive(Debug, Default, Copy, Clone)]
 pub struct TpsGasRecord {
-    pub block_number: u64,
-    pub txs: u128,
-    pub gas: u128,
+    pub(crate) block_number: u64,
+    pub(crate) txs: u128,
+    pub(crate) gas: u128,
 }
 
 impl TpsGasRecord {

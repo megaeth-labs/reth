@@ -1,9 +1,10 @@
+//! This module is used to support the display of tps and mgas/s.
 use crate::metrics::TpsAndGasMessage;
 use revm_utils::time_utils::instant::Instant;
 use std::ops::{Div, Mul};
 
 #[derive(Debug, Default)]
-pub(crate) struct TpsAndGasDisplayer {
+pub(super) struct TpsAndGasDisplayer {
     pre_txs: u128,
     pre_gas: u128,
     last_txs: u128,
@@ -50,7 +51,7 @@ impl TpsAndGasDisplayer {
         println!("block_number: {:?}, MGas: {:.3}\n", block_number, mgas_ps);
     }
 
-    pub fn print(&mut self, block_number: u64, message: TpsAndGasMessage) {
+    pub(super) fn print(&mut self, block_number: u64, message: TpsAndGasMessage) {
         match message {
             TpsAndGasMessage::Record(record) => {
                 self.update_tps_and_gas(record.block_number, record.txs, record.gas)

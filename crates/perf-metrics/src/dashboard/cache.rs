@@ -38,37 +38,14 @@ impl Default for CacheStats {
     }
 }
 
-impl Print for CacheStats {
-    fn print_title(&self) {
-        println!("================================================ Metric of State ===========================================");
-        println!(
-            "{: <COL_WIDTH_BIG$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_BIG$}{:>COL_WIDTH_BIG$}{:>COL_WIDTH_BIG$}",
-            "State functions", "Hits", "Misses", "Miss ratio (%)","Penalty time(s)", "Avg penalty (us)"
-        );
-    }
-
-    fn print_content(&self) {
-        self.print_item("blockhash", Function::BlockHash as usize);
-        self.print_item("code_by_hash", Function::CodeByHash as usize);
-        self.print_item("load_account/basic", Function::LoadCacheAccount as usize);
-        self.print_item("storage", Function::Storage as usize);
-        self.print_item("total", CACHE_STATS_LEN - 1);
-    }
-}
-
-trait StatsAndPrint {
-    fn stats(&self) -> CacheStats;
-    fn print_penalty_distribution(&self);
-}
-
-impl StatsAndPrint for CacheDbRecord {
-    fn stats(&self) -> CacheStats {
+impl From<&CacheDbRecord> for CacheStats {
+    fn from(record: &CacheDbRecord) -> Self {
         let mut cache_stats = CacheStats::default();
 
-        let total_stats = self.access_count();
-        let hit_stats = self.hit_stats();
-        let miss_stats = self.miss_stats();
-        let penalty_stats = self.penalty_stats();
+        let total_stats = record.access_count();
+        let hit_stats = record.hit_stats();
+        let miss_stats = record.miss_stats();
+        let penalty_stats = record.penalty_stats();
 
         for index in 0..total_stats.function.len() {
             cache_stats.functions[index].hits = hit_stats.function[index];
@@ -94,8 +71,32 @@ impl StatsAndPrint for CacheDbRecord {
 
         cache_stats
     }
+}
 
-    fn print_penalty_distribution(&self) {
+impl Print for CacheStats {
+    fn print_title(&self) {
+        println!("================================================ Metric of State ===========================================");
+        println!(
+            "{: <COL_WIDTH_BIG$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_MIDDLE$}{:>COL_WIDTH_BIG$}{:>COL_WIDTH_BIG$}{:>COL_WIDTH_BIG$}",
+            "State functions", "Hits", "Misses", "Miss ratio (%)","Penalty time(s)", "Avg penalty (us)"
+        );
+    }
+
+    fn print_content(&self) {
+        self.print_item("blockhash", Function::BlockHash as usize);
+        self.print_item("code_by_hash", Function::CodeByHash as usize);
+        self.print_item("load_account/basic", Function::LoadCacheAccount as usize);
+        self.print_item("storage", Function::Storage as usize);
+        self.print_item("total", CACHE_STATS_LEN - 1);
+    }
+}
+
+trait PrintPenalty {
+    fn print_penalty(&self);
+}
+
+impl PrintPenalty for CacheDbRecord {
+    fn print_penalty(&self) {
         println!();
         println!("================Penalty percentile=============");
         self.penalty_stats().percentile.print_content();
@@ -105,8 +106,8 @@ impl StatsAndPrint for CacheDbRecord {
 
 impl Print for CacheDbRecord {
     fn print(&self, _block_number: u64) {
-        self.stats().print(_block_number);
-        self.print_penalty_distribution();
+        Into::<CacheStats>::into(self).print(_block_number);
+        self.print_penalty();
     }
 }
 

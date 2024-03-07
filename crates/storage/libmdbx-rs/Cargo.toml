@@ -26,7 +26,6 @@ dashmap = { version = "5.5.3", features = ["inline"], optional = true }
 tracing = { workspace = true, optional = true }
 
 ffi = { package = "reth-mdbx-sys", path = "./mdbx-sys" }
-perf-metrics = { workspace = true, optional = true }
 
 [target.'cfg(not(windows))'.dependencies]
 libffi = "3.2.0"
