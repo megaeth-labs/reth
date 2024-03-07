@@ -6,19 +6,19 @@ use revm_utils::{metrics::types::TransactTime, time_utils::instant::Instant};
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ExecutionDurationRecord {
     // Total time recorder.
-    pub total_recorder: Instant,
+    pub(crate) total_recorder: Instant,
     // General time recorder.
-    pub time_recorder: Instant,
+    pub(crate) time_recorder: Instant,
     // Time of execute inner.
-    pub total: u64,
+    pub(crate) total: u64,
     // Time of get_block_td.
-    pub block_td: u64,
+    pub(crate) block_td: u64,
     // Time of block_with_senders.
-    pub block_with_senders: u64,
+    pub(crate) block_with_senders: u64,
     // Record of txs execution(execute_and_verify_receipt).
-    pub execution: ExecuteTxsRecord,
+    pub(crate) execution: ExecuteTxsRecord,
     // Record of write to db
-    pub write_to_db: WriteToDbRecord,
+    pub(crate) write_to_db: WriteToDbRecord,
 }
 
 // The following functions are used to record overhead.
@@ -43,23 +43,23 @@ pub struct ExecuteTxsRecord {
     /// Record the start time of each subfunction.
     sub_record: Instant,
     /// Time of execute_and_verify_receipt.
-    pub total: u64,
+    pub(crate) total: u64,
     /// Time of transact.
-    pub transact: u64,
+    pub(crate) transact: u64,
     /// Time of revm's transact.
-    pub revm_transact: TransactTime,
+    pub(crate) revm_transact: TransactTime,
     /// Time of commit changes.
-    pub commit_changes: u64,
+    pub(crate) commit_changes: u64,
     /// Time of add receipt.
-    pub add_receipt: u64,
+    pub(crate) add_receipt: u64,
     /// Time of apply_post_execution_state_change.
-    pub apply_post_execution_state_change: u64,
+    pub(crate) apply_post_execution_state_change: u64,
     /// Time of merge_transactions.
-    pub merge_transactions: u64,
+    pub(crate) merge_transactions: u64,
     /// Time of verify_receipt.
-    pub verify_receipt: u64,
+    pub(crate) verify_receipt: u64,
     /// Time of save_receipts.
-    pub save_receipts: u64,
+    pub(crate) save_receipts: u64,
 }
 
 impl ExecuteTxsRecord {
@@ -118,50 +118,50 @@ pub struct WriteToDbRecord {
     write_start_record: Instant,
 
     /// Time of write_to_db.
-    pub total: u64,
+    pub(crate) total: u64,
 
     /// Time of write storage changes in StateReverts.
-    pub revert_storage_time: u64,
+    pub(crate) revert_storage_time: u64,
     /// Data size of write storage changes in StateReverts.
-    pub revert_storage_size: usize,
+    pub(crate) revert_storage_size: usize,
     /// Time of append_dup when write storage changes in StateReverts.
-    pub revert_storage_append_time: u64,
+    pub(crate) revert_storage_append_time: u64,
     /// Time of write account changes in StateReverts.
-    pub revert_account_time: u64,
+    pub(crate) revert_account_time: u64,
     /// Data size of write account changes in StateReverts.
-    pub revert_account_size: usize,
+    pub(crate) revert_account_size: usize,
     /// Time of append_dup when write account changes in StateReverts.
-    pub revert_account_append_time: u64,
+    pub(crate) revert_account_append_time: u64,
 
     /// Time of write receipts.
-    pub write_receipts_time: u64,
+    pub(crate) write_receipts_time: u64,
     /// Data size of write receipts.
-    pub write_receipts_size: usize,
+    pub(crate) write_receipts_size: usize,
     /// Time of append when write receipts.
-    pub receipts_append_time: u64,
+    pub(crate) receipts_append_time: u64,
 
     /// Time of sort in StateChanges's write_to_db.
-    pub sort_time: u64,
+    pub(crate) sort_time: u64,
     /// Time of write account in StateChanges.
-    pub state_account_time: u64,
+    pub(crate) state_account_time: u64,
     /// Data size of write account in StateChanges.
-    pub state_account_size: usize,
+    pub(crate) state_account_size: usize,
     /// Time of upsert when write account changes in StateChanges.
-    pub state_account_upsert_time: u64,
+    pub(crate) state_account_upsert_time: u64,
 
     /// Time of write bytecode in StateChanges.
-    pub state_bytecode_time: u64,
+    pub(crate) state_bytecode_time: u64,
     /// Data size of write bytecode in StateChanges.
-    pub state_bytecode_size: usize,
+    pub(crate) state_bytecode_size: usize,
     /// Time of upsert when write bytecode in StateChanges.
-    pub state_bytecode_upsert_time: u64,
+    pub(crate) state_bytecode_upsert_time: u64,
 
     /// Time of write storage in StateChanges.
-    pub state_storage_time: u64,
+    pub(crate) state_storage_time: u64,
     /// Data size of write storage in StateChanges.
-    pub state_storage_size: usize,
+    pub(crate) state_storage_size: usize,
     /// Time of upsert when write storage in StateChanges.
-    pub state_storage_upsert_time: u64,
+    pub(crate) state_storage_upsert_time: u64,
 }
 
 impl WriteToDbRecord {
