@@ -457,7 +457,7 @@ impl From<&OpcodeRecord> for OpcodeStats {
 
 impl OpcodeStats {
     fn print_opcode_title(&self) {
-        println!("===========================================================================Metric of instruction======================================================================");
+        println!("==============================================================================Opcode cost table=======================================================================");
         println!(
             "{: <COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$} \
             {:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}{:>COL_WIDTH$}",
