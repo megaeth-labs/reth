@@ -46,7 +46,7 @@ macro_rules! define_start_functions {
 // #[cfg(feature = "enable_execution_duration_record")]
 #[allow(unused_macros)]
 macro_rules! impl_write_macro {
-    ($struct_name:ident, $start_record_fn:ident, $record_upsert_time_fn:ident, $record_size_fn:ident, $append_time_fn:ident, $write_size_fn:ident) => {
+    ($struct_name:ident, $start_record_fn:ident, $record_upsert_time_fn:ident, $record_size_fn:ident) => {
         #[cfg(feature = "enable_execution_duration_record")]
         pub struct $struct_name(usize);
 

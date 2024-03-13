@@ -317,15 +317,14 @@ impl BundleStateWithReceipts {
                 for (tx_idx, receipt) in receipts.into_iter().enumerate() {
                     if let Some(receipt) = receipt {
                         #[cfg(feature = "enable_execution_duration_record")]
-                        {
-                            let size = std::mem::size_of::<Receipt>() +
+                        let _record = perf_metrics::ReceiptsWrite::new(
+                            std::mem::size_of::<Receipt>() +
                                 receipt
                                     .logs
                                     .iter()
                                     .map(|log| log.topics.len() * 32 + log.data.0.len())
-                                    .sum::<usize>();
-                            let _record = perf_metrics::ReceiptsWrite::new(size);
-                        }
+                                    .sum::<usize>(),
+                        );
                         receipts_cursor.append(first_tx_index + tx_idx as u64, receipt)?;
                     }
                 }
