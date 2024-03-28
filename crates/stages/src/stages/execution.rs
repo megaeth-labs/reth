@@ -226,21 +226,11 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
                 let (_, trie_updates) = hashed_state
                     .state_root_with_updates(provider.tx_ref())
                     .map_err(|err| StageError::Fatal(err.into()))?;
-                
-                // We only use static files for Receipts, if there is no receipt pruning of any
-                // kind.
-                let static_file_producer_in = if self.prune_modes.receipts.is_none() &&
-                    self.prune_modes.receipts_log_filter.is_empty()
-                {
-                    Some(prepare_static_file_producer(provider, block_number)?)
-                } else {
-                    None
-                };
 
                 state.set_first_block(block_number);
                 state.write_to_storage(
                     provider.tx_ref(),
-                    static_file_producer_in,
+                    None,
                     OriginalValuesKnown::Yes,
                 )?;
                 // insert hashes and intermediate merkle nodes
