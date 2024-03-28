@@ -144,6 +144,7 @@ ethereum = []
 open_performance_dashboard = [
     "reth-stages/open_performance_dashboard",
     "perf-metrics",
+    "reth-node-builder/open_performance_dashboard"
 ]
 enable_opcode_metrics = [
     "perf-metrics/enable_opcode_metrics",
