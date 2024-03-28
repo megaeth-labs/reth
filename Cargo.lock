@@ -6131,6 +6131,7 @@ dependencies = [
  "eyre",
  "fdlimit",
  "futures",
+ "perf-metrics",
  "rayon",
  "reth-auto-seal-consensus",
  "reth-beacon-consensus",
