@@ -25,13 +25,13 @@ impl TpsAndGasDisplayer {
     }
 
     fn start_record(&mut self) {
-        self.pre_txs = self.last_txs;
-        self.pre_gas = self.last_gas;
-        self.pre_instant = Instant::now();
+        // self.pre_txs = self.last_txs;
+        // self.pre_gas = self.last_gas;
+        // self.pre_instant = Instant::now();
     }
 
     fn stop_record(&mut self, block_number: u64) {
-        self.print_content(block_number, self.last_txs, self.last_gas);
+        // self.print_content(block_number, self.last_txs, self.last_gas);
     }
 
     fn print_content(&mut self, block_number: u64, txs: u128, gas: u128) {
