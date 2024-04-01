@@ -31,7 +31,7 @@ impl TpsAndGasDisplayer {
     }
 
     fn stop_record(&mut self, block_number: u64) {
-        self.print_content(block_number, self.last_txs, self.last_gas);
+        // self.print_content(block_number, self.last_txs, self.last_gas);
     }
 
     fn print_content(&mut self, block_number: u64, txs: u128, gas: u128) {
