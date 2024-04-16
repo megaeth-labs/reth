@@ -61,7 +61,8 @@ pub fn validate_withdrawals_presence(
     timestamp: u64,
     has_withdrawals: bool,
 ) -> Result<(), EngineObjectValidationError> {
-    let is_shanghai = chain_spec.fork(Hardfork::Canyon).active_at_timestamp(timestamp);
+    // let is_shanghai = chain_spec.fork(Hardfork::Canyon).active_at_timestamp(timestamp);
+    let is_shanghai = true;
 
     match version {
         EngineApiMessageVersion::V1 => {

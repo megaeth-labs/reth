@@ -273,6 +273,10 @@ revm-primitives = { version = "3.1.0", features = [
 ], default-features = false }
 revm-inspectors = { git = "https://github.com/paradigmxyz/evm-inspectors", rev = "735f67c" }
 
+# revm = { path = "/home/andy/Source/work/revm/crates/revm", features = ["std", "secp256k1"], default-features = false }
+# revm-primitives = { path = "/home/andy/Source/work/revm/crates/primitives", features = ["std"], default-features = false }
+# revm-inspectors = { path = "/home/andy/Source/work/evm-inspectors" }
+
 # eth
 alloy-chains = "0.1.15"
 alloy-primitives = "0.7.0"

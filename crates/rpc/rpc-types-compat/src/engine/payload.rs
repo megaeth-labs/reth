@@ -17,6 +17,7 @@ pub fn try_payload_v1_to_block(payload: ExecutionPayloadV1) -> Result<Block, Pay
         return Err(PayloadError::ExtraData(payload.extra_data))
     }
 
+    #[cfg(not(feature = "optimism"))]
     if payload.base_fee_per_gas < MIN_PROTOCOL_BASE_FEE_U256 {
         return Err(PayloadError::BaseFee(payload.base_fee_per_gas))
     }

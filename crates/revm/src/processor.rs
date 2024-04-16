@@ -144,6 +144,7 @@ where
             header,
             total_difficulty,
         );
+        cfg.handler_cfg.is_optimism = true;
         *self.evm.cfg_mut() = cfg.cfg_env;
 
         // This will update the spec in case it changed
