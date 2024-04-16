@@ -193,6 +193,21 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
 
             stage_checkpoint.progress.processed += block.gas_used;
 
+            #[cfg(feature = "enable_livesync_test")]
+            {
+                let mut state = executor.take_output_state();
+                let hashed_state = state.hash_state_slow();
+                let (_, trie_updates) = hashed_state
+                    .state_root_with_updates(provider.tx_ref())
+                    .map_err(|err| StageError::Fatal(err.into()))?;
+
+                state.set_first_block(block_number);
+                state.write_to_storage(provider.tx_ref(), None, OriginalValuesKnown::Yes)?;
+
+                HashedStateChanges(hashed_state).write_to_db(provider.tx_ref())?;
+                trie_updates.flush(provider.tx_ref())?;
+            }
+
             // Check if we should commit now
             let bundle_size_hint = executor.size_hint().unwrap_or_default() as u64;
             if self.thresholds.is_end_of_batch(
@@ -205,11 +220,13 @@ impl<EF: ExecutorFactory> ExecutionStage<EF> {
             }
         }
         let time = Instant::now();
+        #[cfg(not(feature = "enable_livesync_test"))]
         let state = executor.take_output_state();
         let write_preparation_duration = time.elapsed();
 
         let time = Instant::now();
         // write output
+        #[cfg(not(feature = "enable_livesync_test"))]
         state.write_to_storage(
             provider.tx_ref(),
             static_file_producer,
