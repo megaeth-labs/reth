@@ -15,6 +15,7 @@ workspace = true
 reth-chainspec.workspace = true
 reth-ethereum-forks.workspace = true
 reth-evm.workspace = true
+reth-metrics.workspace = true
 reth-primitives = { workspace = true, features = ["reth-codec"] }
 reth-revm.workspace = true
 reth-ethereum-consensus.workspace = true
@@ -27,6 +28,7 @@ revm-primitives.workspace = true
 # Alloy
 alloy-eips.workspace = true
 alloy-sol-types.workspace = true
+log = "0.4.22"
 
 [dev-dependencies]
 reth-testing-utils.workspace = true

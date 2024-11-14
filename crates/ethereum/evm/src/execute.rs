@@ -34,10 +34,15 @@ use revm_primitives::{
     BlockEnv, CfgEnvWithHandlerCfg, EVMError, EnvWithHandlerCfg, ResultAndState,
 };
 
+
+
 #[cfg(not(feature = "std"))]
 use alloc::{boxed::Box, sync::Arc, vec, vec::Vec};
+use std::hash::Hash;
 #[cfg(feature = "std")]
 use std::sync::Arc;
+use log::info;
+use reth_metrics::metrics::histogram;
 
 /// Provides executors to execute regular ethereum blocks
 #[derive(Debug, Clone)]
@@ -165,6 +170,8 @@ where
         )?;
 
         // execute transactions
+        let mut failed_txs = 0;
+        let block_number = block.number;
         let mut cumulative_gas_used = 0;
         let mut receipts = Vec::with_capacity(block.body.len());
         for (sender, transaction) in block.transactions_with_sender() {
@@ -201,6 +208,11 @@ where
             // append gas used
             cumulative_gas_used += result.gas_used();
 
+            if !result.is_success() {
+                failed_txs += 1;
+                info!("Transaction:{} failed with error: {:?}", transaction.recalculate_hash(), result);
+            }
+
             // Push transaction changeset and calculate header bloom filter for receipt.
             receipts.push(
                 #[allow(clippy::needless_update)] // side-effect of optimism fields
@@ -235,6 +247,12 @@ where
             vec![]
         };
 
+        if failed_txs > 0 {
+            let failed_tx_ratio = (failed_txs as f64 / receipts.len() as f64) * 100.0;
+            info!(">>>>>>>>>> block:{} with failed tx_ratio:{:.2}%", block_number, failed_tx_ratio);
+            // info!("block:{} execute has:{} failed transactions", block.number, failed_txs);
+            histogram!("salt_failed_transactions").record(failed_txs as f64);
+        }
         Ok(EthExecuteOutput { receipts, requests, gas_used: cumulative_gas_used })
     }
 }

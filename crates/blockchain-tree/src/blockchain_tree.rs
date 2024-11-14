@@ -64,7 +64,7 @@ pub struct BlockchainTree<DB, E> {
     /// Tracks all the chains, the block indices, and the block buffer.
     state: TreeState,
     /// External components (the database, consensus engine etc.)
-    externals: TreeExternals<DB, E>,
+    pub externals: TreeExternals<DB, E>,
     /// Tree configuration
     config: BlockchainTreeConfig,
     /// Broadcast channel for canon state changes notifications.
@@ -1211,7 +1211,7 @@ where
     }
 
     /// Write the given chain to the database as canonical.
-    fn commit_canonical_to_database(
+    pub fn commit_canonical_to_database(
         &self,
         chain: Chain,
         recorder: &mut MakeCanonicalDurationsRecorder,

@@ -211,6 +211,7 @@ pub fn insert_state<'a, 'b, DB: Database>(
         Vec::new(),
     );
 
+
     let mut storage_writer = UnifiedStorageWriter::from_database(provider);
     storage_writer.write_to_storage(execution_outcome, OriginalValuesKnown::Yes)?;
 

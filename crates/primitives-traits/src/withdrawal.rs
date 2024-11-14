@@ -32,7 +32,7 @@ use serde::{Deserialize, Serialize};
     Deserialize,
 )]
 #[as_ref(forward)]
-pub struct Withdrawals(Vec<Withdrawal>);
+pub struct Withdrawals(pub Vec<Withdrawal>);
 
 impl Withdrawals {
     /// Create a new Withdrawals instance.

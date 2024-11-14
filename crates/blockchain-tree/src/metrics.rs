@@ -34,7 +34,7 @@ pub struct BlockBufferMetrics {
 }
 
 #[derive(Debug)]
-pub(crate) struct MakeCanonicalDurationsRecorder {
+pub struct MakeCanonicalDurationsRecorder {
     start: Instant,
     pub(crate) actions: Vec<(MakeCanonicalAction, Duration)>,
     latest: Option<Duration>,

@@ -1,0 +1,40 @@
+[package]
+name = "block_replay"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+alloy-primitives = { workspace = true, features = ["rand", "rlp"] }
+reth-db = { workspace = true, features = ["mdbx"]}
+reth-db-common.workspace = true
+reth-primitives.workspace = true
+reth-primitives-traits.workspace = true
+reth-chainspec.workspace = true
+reth-provider = { workspace = true, features = ["test-utils"]}
+reth-evm.workspace = true
+reth-trie.workspace = true
+reth-revm = { workspace = true }
+revm-primitives = {workspace = true, features = ["optional_balance_check", "optional_block_gas_limit"]}
+reth-evm-ethereum.workspace = true
+reth-blockchain-tree.workspace = true
+reth-consensus = { workspace = true, features = ["test-utils"]}
+reth-chain-state.workspace = true
+reth-prune-types.workspace = true
+reth-tasks.workspace = true
+reth-execution-types.workspace = true
+clap = { workspace = true, features = ["derive", "env"] }
+tokio.workspace = true
+reth-ipc.workspace = true
+jsonrpsee.workspace = true
+
+# salt
+rand = "0.8.5"
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+
+[dev-dependencies]
+log = "0.4.21"
+
+[lints]
+workspace = true

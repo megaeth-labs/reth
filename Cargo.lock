@@ -1276,6 +1276,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "block_replay"
+version = "1.0.5"
+dependencies = [
+ "alloy-primitives",
+ "clap",
+ "jsonrpsee",
+ "log",
+ "rand 0.8.5",
+ "reth-blockchain-tree",
+ "reth-chain-state",
+ "reth-chainspec",
+ "reth-consensus",
+ "reth-db",
+ "reth-db-common",
+ "reth-evm",
+ "reth-evm-ethereum",
+ "reth-execution-types",
+ "reth-ipc",
+ "reth-primitives",
+ "reth-primitives-traits",
+ "reth-provider",
+ "reth-prune-types",
+ "reth-revm",
+ "reth-tasks",
+ "reth-trie",
+ "revm-primitives",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "bls12_381"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7266,11 +7298,13 @@ version = "1.0.5"
 dependencies = [
  "alloy-eips",
  "alloy-sol-types",
+ "log",
  "reth-chainspec",
  "reth-ethereum-consensus",
  "reth-ethereum-forks",
  "reth-evm",
  "reth-execution-types",
+ "reth-metrics",
  "reth-primitives",
  "reth-prune-types",
  "reth-revm",
@@ -8785,6 +8819,7 @@ dependencies = [
  "criterion",
  "derive_more",
  "itertools 0.13.0",
+ "log",
  "metrics",
  "proptest",
  "proptest-arbitrary-interop",

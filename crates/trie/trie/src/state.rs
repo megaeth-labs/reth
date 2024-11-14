@@ -7,6 +7,7 @@ use rayon::prelude::{IntoParallelIterator, ParallelIterator};
 use reth_primitives::{keccak256, Account, Address, B256, U256};
 use revm::db::{states::StorageSlot, AccountStatus, BundleAccount};
 use std::collections::{hash_map, HashMap, HashSet};
+use log::info;
 
 /// Representation of in-memory hashed state.
 #[derive(PartialEq, Eq, Clone, Default, Debug)]
