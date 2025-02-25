@@ -1,17 +1,18 @@
 use reth_primitives::{BlockHash, BlockNumHash, BlockNumber};
 use std::collections::BTreeMap;
 
-/// This keeps track of (non-finalized) blocks of the canonical chain.
+/// Tracks non-finalized blocks of the canonical chain.
 ///
-/// This is a wrapper type around an ordered set of block numbers and hashes that belong to the
-/// canonical chain that is not yet finalized.
+/// This is a wrapper around an ordered map of block numbers and hashes that belong to the
+/// canonical chain but are not yet finalized.
 #[derive(Debug, Clone, Default)]
 pub(crate) struct CanonicalChain {
-    /// All blocks of the canonical chain in order of their block number.
+    /// Ordered mapping of canonical chain blocks by their block number.
     chain: BTreeMap<BlockNumber, BlockHash>,
 }
 
 impl CanonicalChain {
+    /// Creates a new [`CanonicalChain`] with the given chain data.
     pub(crate) const fn new(chain: BTreeMap<BlockNumber, BlockHash>) -> Self {
         Self { chain }
     }
@@ -31,21 +32,13 @@ impl CanonicalChain {
     /// Returns the block number of the (non-finalized) canonical block with the given hash.
     #[inline]
     pub(crate) fn canonical_number(&self, block_hash: &BlockHash) -> Option<BlockNumber> {
-        self.chain.iter().find_map(
-            |(number, hash)| {
-                if hash == block_hash {
-                    Some(*number)
-                } else {
-                    None
-                }
-            },
-        )
+        self.chain.iter().find_map(|(&number, &hash)| (hash == *block_hash).then_some(number))
     }
 
-    /// Extends all items from the given iterator to the chain.
+    /// Extends the chain with the given iterator of block number and hash pairs.
     #[inline]
-    pub(crate) fn extend(&mut self, blocks: impl Iterator<Item = (BlockNumber, BlockHash)>) {
-        self.chain.extend(blocks)
+    pub(crate) fn extend(&mut self, blocks: impl IntoIterator<Item = (BlockNumber, BlockHash)>) {
+        self.chain.extend(blocks);
     }
 
     /// Retains only the elements specified by the predicate.
@@ -54,14 +47,16 @@ impl CanonicalChain {
     where
         F: FnMut(&BlockNumber, &mut BlockHash) -> bool,
     {
-        self.chain.retain(f)
+        self.chain.retain(f);
     }
 
+    /// Returns a reference to the inner chain data.
     #[inline]
     pub(crate) const fn inner(&self) -> &BTreeMap<BlockNumber, BlockHash> {
         &self.chain
     }
 
+    /// Returns the tip (latest block) of the canonical chain.
     #[inline]
     pub(crate) fn tip(&self) -> BlockNumHash {
         self.chain
@@ -70,11 +65,13 @@ impl CanonicalChain {
             .unwrap_or_default()
     }
 
+    /// Returns an iterator over the chain.
     #[inline]
     pub(crate) fn iter(&self) -> impl Iterator<Item = (BlockNumber, BlockHash)> + '_ {
         self.chain.iter().map(|(&number, &hash)| (number, hash))
     }
 
+    /// Consumes the structure and returns an iterator over the chain.
     #[inline]
     pub(crate) fn into_iter(self) -> impl Iterator<Item = (BlockNumber, BlockHash)> {
         self.chain.into_iter()
