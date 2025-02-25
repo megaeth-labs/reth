@@ -4,16 +4,16 @@ use reth_primitives::{BlockHash, BlockNumber, ForkBlock};
 use reth_provider::{BlockExecutionForkProvider, ExecutionDataProvider, ExecutionOutcome};
 use std::collections::BTreeMap;
 
-/// Structure that combines references of required data to be a [`ExecutionDataProvider`].
+/// Structure that combines references to required data to be an [`ExecutionDataProvider`].
 #[derive(Clone, Debug)]
 pub struct BundleStateDataRef<'a> {
-    /// The execution outcome after execution of one or more transactions and/or blocks.
+    /// The execution outcome after executing one or more transactions and/or blocks.
     pub execution_outcome: &'a ExecutionOutcome,
-    /// The blocks in the sidechain.
+    /// Block hashes in the sidechain.
     pub sidechain_block_hashes: &'a BTreeMap<BlockNumber, BlockHash>,
-    /// The blocks in the canonical chain.
+    /// Block hashes in the canonical chain.
     pub canonical_block_hashes: &'a BTreeMap<BlockNumber, BlockHash>,
-    /// Canonical fork
+    /// The fork point in the canonical chain.
     pub canonical_fork: ForkBlock,
 }
 
@@ -23,12 +23,10 @@ impl<'a> ExecutionDataProvider for BundleStateDataRef<'a> {
     }
 
     fn block_hash(&self, block_number: BlockNumber) -> Option<BlockHash> {
-        let block_hash = self.sidechain_block_hashes.get(&block_number).copied();
-        if block_hash.is_some() {
-            return block_hash
-        }
-
-        self.canonical_block_hashes.get(&block_number).copied()
+        self.sidechain_block_hashes
+            .get(&block_number)
+            .copied()
+            .or_else(|| self.canonical_block_hashes.get(&block_number).copied())
     }
 }
 
@@ -38,16 +36,16 @@ impl<'a> BlockExecutionForkProvider for BundleStateDataRef<'a> {
     }
 }
 
-/// Structure that owns the relevant data needs to be a [`ExecutionDataProvider`]
+/// Structure that owns the relevant data needed to be an [`ExecutionDataProvider`].
 #[derive(Clone, Debug)]
 pub struct ExecutionData {
-    /// Execution outcome.
+    /// The execution outcome after executing transactions and/or blocks.
     pub execution_outcome: ExecutionOutcome,
-    /// Parent block hashes needs for evm BLOCKHASH opcode.
-    /// NOTE: it does not mean that all hashes are there but all until finalized are there.
-    /// Other hashes can be obtained from provider
+    /// Parent block hashes needed for the EVM `BLOCKHASH` opcode.
+    /// NOTE: Not all hashes may be present, but finalized ones are included.
+    /// Other hashes can be obtained from the provider.
     pub parent_block_hashes: BTreeMap<BlockNumber, BlockHash>,
-    /// Canonical block where state forked from.
+    /// The fork point in the canonical chain.
     pub canonical_fork: ForkBlock,
 }
 
