@@ -93,6 +93,7 @@ impl<DB: Database + 'static> StaticFileHook<DB> {
 
                 let Some(locked_static_file_producer) = static_file_producer.try_lock_arc() else {
                     trace!(target: "consensus::engine::hooks::static_file", "StaticFileProducer lock is already taken");
+                    self.state = StaticFileProducerState::Idle(Some(static_file_producer));
                     return Ok(None)
                 };
 
