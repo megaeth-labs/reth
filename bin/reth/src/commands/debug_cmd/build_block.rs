@@ -78,7 +78,7 @@ pub struct Command {
 }
 
 impl Command {
-    /// Fetches the best block block from the database.
+    /// Fetches the best block from the database.
     ///
     /// If the database is empty, returns the genesis block.
     fn lookup_best_block(
@@ -113,7 +113,7 @@ impl Command {
         }
     }
 
-    /// Execute `debug in-memory-merkle` command
+    /// Execute `debug build-block` command
     pub async fn execute(self, ctx: CliContext) -> eyre::Result<()> {
         let Environment { provider_factory, .. } = self.env.init(AccessRights::RW)?;
 
