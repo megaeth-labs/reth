@@ -65,6 +65,8 @@ impl Case for BlockchainTestCase {
             return Err(Error::Skipped)
         }
 
+        println!("===========000");
+
         // Iterate through test cases, filtering by the network type to exclude specific forks.
         self.tests
             .values()
@@ -112,7 +114,12 @@ impl Case for BlockchainTestCase {
 
                 // Decode and insert blocks, creating a chain of blocks for the test case.
                 let last_block = case.blocks.iter().try_fold(None, |_, block| {
+                    println!("===========001");
+
                     let decoded = SealedBlock::decode(&mut block.rlp.as_ref())?;
+
+                    println!("===========002");
+
                     provider.insert_historical_block(
                         decoded.clone().try_seal_with_senders().unwrap(),
                     )?;
@@ -136,6 +143,7 @@ impl Case for BlockchainTestCase {
                     &provider,
                     ExecInput { target: last_block.as_ref().map(|b| b.number), checkpoint: None },
                 );
+                println!("===========003");
 
                 // Validate the post-state for the test case.
                 match (&case.post_state, &case.post_state_hash) {
@@ -156,6 +164,8 @@ impl Case for BlockchainTestCase {
                     }
                     _ => return Err(Error::MissingPostState),
                 }
+
+                println!("===========004");
 
                 // Drop the provider without committing to the database.
                 drop(provider);

@@ -77,3 +77,31 @@ mod general_state_tests {
 }
 
 // TODO: Add ValidBlocks and InvalidBlocks tests
+
+macro_rules! valid_blocks_test {
+    ($test_name:ident, $dir:literal) => {
+        #[test]
+        fn $test_name() {
+            BlockchainTests::new(format!("ValidBlocks/{}", $dir)).run();
+        }
+    };
+}
+
+mod valid_blocks_tests {
+    use super::*;
+
+    valid_blocks_test!(gas_limit, "bcBlockGasLimitTest");
+    valid_blocks_test!(eip1153, "bcEIP1153-transientStorage");
+    valid_blocks_test!(eip1559, "bcEIP1559");
+    valid_blocks_test!(eip3675, "bcEIP3675");
+    valid_blocks_test!(eip4844, "bcEIP4844-blobtransactions");
+    valid_blocks_test!(example, "bcExample");
+    valid_blocks_test!(exploit, "bcExploitTest");
+    valid_blocks_test!(fork_stress, "bcForkStressTest");
+    valid_blocks_test!(gas_pricer, "bcGasPricerTest");
+    valid_blocks_test!(block_hash, "bcRandomBlockhashTest");
+    valid_blocks_test!(state_tests, "bcStateTests");
+    valid_blocks_test!(valid_block, "bcValidBlockTest");
+    valid_blocks_test!(wallet, "bcWalletTest");
+    valid_blocks_test!(megaeth, "bcMegaEthTest");
+}
