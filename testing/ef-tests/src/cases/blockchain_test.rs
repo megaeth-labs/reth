@@ -25,6 +25,12 @@ use reth_trie::{HashedPostState, KeccakKeyHasher, StateRoot};
 use reth_trie_db::DatabaseStateRoot;
 use std::{collections::BTreeMap, fs, path::Path, sync::Arc};
 
+/// MegaBlock is a block that uses the OpTxEnvelope as the transaction type.
+pub type MegaBlock = alloy_consensus::Block<MegaTransactionSigned>;
+
+/// MegaTransactionSigned is a transaction that uses the OpTxEnvelope as the transaction type.
+pub type MegaTransactionSigned = op_alloy_consensus::OpTxEnvelope;
+
 /// A handler for the blockchain test suite.
 #[derive(Debug)]
 pub struct BlockchainTests {
@@ -94,7 +100,8 @@ impl BlockchainTestCase {
     /// expectations encoded in the JSON file.
     fn run_single_case(name: &str, case: &BlockchainTest) -> Result<(), Error> {
         let expectation = Self::expected_failure(case);
-        match run_case(case) {
+        let only_decode = if name == "megaeth" { true } else { false };
+        match run_case(case, only_decode) {
             // All blocks executed successfully.
             Ok(()) => {
                 // Check if the test case specifies that it should have failed
@@ -160,6 +167,8 @@ impl Case for BlockchainTestCase {
             return Err(Error::Skipped)
         }
 
+        println!("===========000");
+
         // Iterate through test cases, filtering by the network type to exclude specific forks.
         self.tests
             .iter()
@@ -183,7 +192,19 @@ impl Case for BlockchainTestCase {
 /// Returns:
 /// - `Ok(())` if all blocks execute successfully and the final state is correct.
 /// - `Err(Error)` if any block fails to execute correctly, or if the post-state validation fails.
-fn run_case(case: &BlockchainTest) -> Result<(), Error> {
+fn run_case(case: &BlockchainTest, only_decode: bool) -> Result<(), Error> {
+    if only_decode {
+        println!("===========001");
+        let _blocks = decode_blocks_for_mega(&case.blocks)?;
+        println!("===========002");
+        println!(
+            "the test is only decoding, skipping execution, success decoded the BlockchainTest"
+        );
+        println!("now, you get the _blocks, case.pre, case.post_state, case.network");
+
+        return Ok(());
+    }
+
     // Create a new test database and initialize a provider for the test case.
     let chain_spec: Arc<ChainSpec> = Arc::new(case.network.into());
     let factory = create_test_provider_factory_with_chain_spec(chain_spec.clone());
@@ -336,6 +357,29 @@ fn decode_blocks(
         let block_number = (block_index + 1) as u64;
 
         let decoded = SealedBlock::<Block>::decode(&mut block.rlp.as_ref())
+            .map_err(|_| Error::BlockProcessingFailed { block_number })?;
+
+        let recovered_block = decoded
+            .clone()
+            .try_recover()
+            .map_err(|_| Error::BlockProcessingFailed { block_number })?;
+
+        blocks.push(recovered_block);
+    }
+
+    Ok(blocks)
+}
+
+fn decode_blocks_for_mega(
+    test_case_blocks: &[crate::models::Block],
+) -> Result<Vec<RecoveredBlock<MegaBlock>>, Error> {
+    let mut blocks = Vec::with_capacity(test_case_blocks.len());
+    for (block_index, block) in test_case_blocks.iter().enumerate() {
+        // The blocks do not include the genesis block which is why we have the plus one.
+        // We also cannot use block.number because for invalid blocks, this may be incorrect.
+        let block_number = (block_index + 1) as u64;
+
+        let decoded = SealedBlock::<MegaBlock>::decode(&mut block.rlp.as_ref())
             .map_err(|_| Error::BlockProcessingFailed { block_number })?;
 
         let recovered_block = decoded

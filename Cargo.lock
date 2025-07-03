@@ -3050,6 +3050,7 @@ dependencies = [
  "alloy-primitives",
  "alloy-rlp",
  "crunchy",
+ "op-alloy-consensus",
  "rayon",
  "reth-chainspec",
  "reth-consensus",

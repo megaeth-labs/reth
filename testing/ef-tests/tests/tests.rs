@@ -90,3 +90,13 @@ macro_rules! blockchain_test {
 
 blockchain_test!(valid_blocks, ValidBlocks);
 blockchain_test!(invalid_blocks, InvalidBlocks);
+
+mod megaeth_test {
+    use super::*;
+
+    #[test]
+    fn test_megaeth() {
+        reth_tracing::init_test_tracing();
+        BlockchainTests::new(format!("ValidBlocks/bcMegaEthTest")).run();
+    }
+}
