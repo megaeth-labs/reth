@@ -200,7 +200,7 @@ fn run_case(case: &BlockchainTest, only_decode: bool) -> Result<(), Error> {
         println!(
             "the test is only decoding, skipping execution, success decoded the BlockchainTest"
         );
-        println!("now, you get the _blocks, case.pre, case.post_state, case.network");
+        println!("now, you get the _blocks, case.pre, case.post_state, case.network, and so on");
 
         return Ok(());
     }
