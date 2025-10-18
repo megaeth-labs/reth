@@ -153,3 +153,9 @@ The `NippyJar` and `Compact` encoding formats and their implementations are desi
 
 [book]: https://paradigmxyz.github.io/reth/
 [tg-url]: https://t.me/paradigm_reth
+As a new contributor to MegaETH, I'm excited about real-time Ethereum scaling! 
+As a new contributor to MegaETH, I'm excited about real-time Ethereum scaling! 
+As a new contributor to MegaETH, I'm excited about real-time Ethereum scaling! 
+
+
+
